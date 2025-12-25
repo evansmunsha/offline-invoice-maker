@@ -1,0 +1,25 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="192" height="192" fill="#222222" rx="32"/>
+
+  <!-- Invoice document -->
+  <rect x="32" y="40" width="128" height="96" fill="white" rx="8" stroke="#222" stroke-width="2"/>
+
+  <!-- Header line -->
+  <line x1="48" y1="64" x2="144" y2="64" stroke="#222" stroke-width="3"/>
+
+  <!-- Content lines -->
+  <line x1="48" y1="80" x2="176" y2="80" stroke="#222" stroke-width="2"/>
+  <line x1="48" y1="96" x2="128" y2="96" stroke="#222" stroke-width="2"/>
+  <line x1="48" y1="112" x2="144" y2="112" stroke="#222" stroke-width="2"/>
+
+  <!-- Total line (thicker) -->
+  <line x1="128" y1="128" x2="176" y2="128" stroke="#222" stroke-width="3"/>
+
+  <!-- Dollar sign -->
+  <circle cx="150" cy="58" r="8" fill="#007bff"/>
+  <text x="150" y="63" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">$</text>
+
+  <!-- App name -->
+  <text x="96" y="164" text-anchor="middle" fill="white" font-family="Arial" font-size="14" font-weight="bold">INVOICE</text>
+</svg>
