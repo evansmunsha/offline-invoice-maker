@@ -371,3 +371,4 @@ Built with ❤️ in Zambia 🇿🇲 for entrepreneurs worldwide
 [🌐 Live Demo](https://your-demo-url.com) • [📱 Android App](https://play.google.com/store/apps/details?id=com.evansmunsha.invoicemaker) • [📧 Contact](mailto:evansmunsha@gmail.com)
 
 </div># offline-invoice-maker
+# offline-invoice-maker
