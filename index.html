@@ -8,6 +8,11 @@
 
         <title>Offline Invoice Maker</title>
 
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="manifest.json" />
+        <!-- Theme color for browser UI -->
+        <meta name="theme-color" content="#ffffff" />
+
         <!-- Main stylesheet -->
         <link rel="stylesheet" href="css/style.css" />
     </head>
@@ -782,5 +787,18 @@
         <script src="js/storage.js"></script>
         <script src="js/pdf.js"></script>
         <script src="js/app.js"></script>
+        <!-- Service Worker Registration -->
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then((registration) => {
+                            console.log('Service Worker registered with scope:', registration.scope);
+                        }, (error) => {
+                            console.log('Service Worker registration failed:', error);
+                        });
+                });
+            }
+        </script>
     </body>
 </html>

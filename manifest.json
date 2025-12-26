@@ -1,10 +1,11 @@
 {
   "name": "Offline Invoice Maker",
-  "short_name": "Invoice",
-  "start_url": "/",
+  "short_name": "Invoice Maker",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#222222",
+  "theme_color": "#ffffff",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "assets/icons/icon-192.png",
