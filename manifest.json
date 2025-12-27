@@ -6,6 +6,8 @@
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait",
+  "id": "invoice-maker-pwa-v1",
+  "description": "Create simple, professional invoices directly in your browser. Works offline and supports multiple currencies.",
   "icons": [
     {
       "src": "assets/icons/icon-192.png",
