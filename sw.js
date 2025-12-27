@@ -1,17 +1,25 @@
+/* =================================================
+   SERVICE WORKER – OFFLINE INVOICE MAKER
+   Offline-first PWA (PWABuilder compatible)
+================================================= */
+
 const CACHE_NAME = "offline-invoice-cache-v1";
 
-/* Files needed for the app to work offline */
+/* Files required for offline use */
 const PRECACHE_ASSETS = [
-  "/",
-  "/index.html",
-  "/css/style.css",
-  "/js/app.js",
-  "/js/storage.js",
-  "/js/pdf.js",
-  "/manifest.json",
-  "/assets/logo.png",
-  "/assets/icons/icon-192.png",
-  "/assets/icons/icon-512.png"
+  "./",
+  "./index.html",
+  "./manifest.json",
+
+  "./css/style.css",
+
+  "./js/app.js",
+  "./js/storage.js",
+  "./js/pdf.js",
+
+  "./assets/logo.png",
+  "./assets/icons/icon-192.png",
+  "./assets/icons/icon-512.png"
 ];
 
 /* =========================
@@ -23,13 +31,28 @@ self.addEventListener("install", event => {
       return cache.addAll(PRECACHE_ASSETS);
     })
   );
+
+  // Activate immediately
+  self.skipWaiting();
 });
 
 /* =========================
-   ACTIVATE → TAKE CONTROL
+   ACTIVATE → CLEAN OLD CACHE
 ========================= */
 self.addEventListener("activate", event => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      );
+    })
+  );
+
+  self.clients.claim();
 });
 
 /* =========================
@@ -38,16 +61,26 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request).then(response => {
-      // If file exists in cache → use it
+      // Serve from cache if available
       if (response) {
         return response;
       }
 
-      // Otherwise → go to network
+      // Otherwise go to network
       return fetch(event.request);
     })
   );
 });
+
+/* =========================
+   MESSAGE → SKIP WAITING
+========================= */
+self.addEventListener("message", event => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 
 
 
