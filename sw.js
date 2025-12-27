@@ -6,7 +6,7 @@ const PRECACHE_ASSETS = [
   "/index.html",
   "/css/style.css",
   "/js/app.js",
-  "/js/db.js",
+  "/js/storage.js",
   "/js/pdf.js",
   "/manifest.json",
   "/assets/logo.png",
