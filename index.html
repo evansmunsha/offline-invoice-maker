@@ -788,8 +788,14 @@
         <script src="js/pdf.js"></script>
         <script src="js/app.js"></script>
         <!-- Service Worker Registration -->
+         <script>
+            if (typeof navigator.serviceWorker !== 'undefined') {
+                navigator.serviceWorker.register('sw.js')
+            }
+         </script>
+
         <!-- Service Worker Registration -->
-        <script>
+        <!-- <script>
             if ("serviceWorker" in navigator) {
                 window.addEventListener("load", () => {
                 navigator.serviceWorker
@@ -798,7 +804,8 @@
                     .catch(err => console.error("SW failed:", err));
                 });
             }
-        </script>
+        </script> -->
+
 
     </body>
 </html>

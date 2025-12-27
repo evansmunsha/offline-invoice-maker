@@ -1,4 +1,66 @@
+const CACHE_NAME = "offline-invoice-cache-v1";
 
+/* Files needed for the app to work offline */
+const PRECACHE_ASSETS = [
+  "/",
+  "/index.html",
+  "/css/style.css",
+  "/js/app.js",
+  "/js/db.js",
+  "/js/pdf.js",
+  "/manifest.json",
+  "/assets/logo.png",
+  "/assets/icons/icon-192.png",
+  "/assets/icons/icon-512.png"
+];
+
+/* =========================
+   INSTALL → PRE-CACHE FILES
+========================= */
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(PRECACHE_ASSETS);
+    })
+  );
+});
+
+/* =========================
+   ACTIVATE → TAKE CONTROL
+========================= */
+self.addEventListener("activate", event => {
+  event.waitUntil(self.clients.claim());
+});
+
+/* =========================
+   FETCH → CACHE FIRST
+========================= */
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      // If file exists in cache → use it
+      if (response) {
+        return response;
+      }
+
+      // Otherwise → go to network
+      return fetch(event.request);
+    })
+  );
+});
+
+
+
+
+
+
+
+
+
+
+
+
+/* 
 const CACHE_NAME = 'invoice-maker-v1';
 
 // List all files you want to cache for offline use
@@ -73,4 +135,4 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-});
+}); */
