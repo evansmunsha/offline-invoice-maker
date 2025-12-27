@@ -3094,7 +3094,7 @@ Would you like to contact support via email?`;
 }
 
 
-// Call this function inside your saveInvoice click handler
+/* // Call this function inside your saveInvoice click handler
 function triggerNotification(title, body) {
     // 1. Check if the browser supports notifications
     if (!("Notification" in window)) {
@@ -3121,7 +3121,7 @@ function triggerNotification(title, body) {
             }
         });
     }
-}
+} */
 
 // --- Usage Example ---
 // Find your save button in your existing code and add the call:
