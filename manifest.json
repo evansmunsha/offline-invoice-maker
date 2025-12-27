@@ -6,7 +6,7 @@
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait",
-  "id": "evansmunsha.github.io/offline-invoice-maker",
+  "id": "com.evansmunsha.offlineinvoicemaker",
   "lang": "en",
   "categories": ["Offline Invoice"],
   "dir": "ltr",
