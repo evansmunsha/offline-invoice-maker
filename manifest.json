@@ -6,7 +6,7 @@
   "scope": "./index.html",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "id": "com.evansmunsha.offlineinvoicemaker",
   "lang": "en",
   "categories": ["productivity", "business"],
