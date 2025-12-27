@@ -6,7 +6,10 @@
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait",
-  "id": "invoice-maker-pwa-v1",
+  "id": "evansmunsha.github.io/offline-invoice-maker",
+  "lang": "en",
+  "categories": ["Offline Invoice"],
+  "dir": "ltr",
   "description": "Create simple, professional invoices directly in your browser. Works offline and supports multiple currencies.",
   "icons": [
     {
@@ -43,3 +46,5 @@
 }
 
 }
+
+
