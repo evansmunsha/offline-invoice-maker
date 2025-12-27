@@ -7,7 +7,7 @@ const CACHE_NAME = "offline-invoice-cache-v1";
 
 /* Files required for offline use */
 const PRECACHE_ASSETS = [
-  "./",
+  "/",
   "./index.html",
   "./manifest.json",
 
