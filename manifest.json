@@ -19,5 +19,27 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "shortcuts": [
+  {
+    "name": "New Invoice",
+    "short_name": "New",
+    "url": "/",
+    "icons": [
+      {
+        "src": "assets/icons/icon-192.png",
+        "sizes": "192x192"
+      }
+    ]
+  }
+]
+,
+  "share_target": {
+  "action": "/",
+  "method": "GET",
+  "params": {
+    "text": "text"
+  }
+}
+
 }
