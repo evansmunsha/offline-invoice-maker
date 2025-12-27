@@ -8,9 +8,9 @@
   "orientation": "portrait",
   "id": "com.evansmunsha.offlineinvoicemaker",
   "lang": "en",
-  "categories": ["Offline Invoice"],
+  "categories": ["productivity", "business"],
   "dir": "ltr",
-  "description": "Create simple, professional invoices directly in your browser. Works offline and supports multiple currencies.",
+  "description": "Create and manage invoices offline. Generate PDFs and store history on your device.",
   "icons": [
     {
       "src": "assets/icons/icon-192.png",
