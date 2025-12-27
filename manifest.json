@@ -3,7 +3,7 @@
   "short_name": "Invoice Maker",
   "start_url": "./index.html",
   "display": "standalone",
-  "scope": "./index.html",
+  "scope": "./offline-invoice-maker",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait-primary",
