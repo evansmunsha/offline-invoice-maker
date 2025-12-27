@@ -2237,3 +2237,36 @@ select:focus-visible {
         font-size: 16px; /* Prevent zoom on iOS */
     }
 }
+
+
+/* 1. Prevent text highlighting on app-like elements (buttons, headers) */
+.app-header, 
+.card, 
+button, 
+input, 
+select {
+    -webkit-tap-highlight-color: transparent; /* Removes blue highlight on mobile tap */
+    user-select: none; /* Makes it feel like an app, not a text document */
+}
+
+/* Allow text selection only where users actually type input */
+input, 
+textarea {
+    user-select: text;
+}
+
+/* 2. Ensure smooth scrolling for navigation */
+html {
+    scroll-behavior: smooth;
+}
+
+/* 3. Make buttons respond faster on mobile devices */
+button {
+    touch-action: manipulation; /* Removes the 300ms delay on mobile taps */
+    transition: transform 0.1s ease;
+}
+
+/* Add a subtle "press" effect when clicking buttons */
+button:active {
+    transform: scale(0.98);
+}

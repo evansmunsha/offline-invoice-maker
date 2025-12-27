@@ -19,5 +19,21 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create New Invoice",
+      "short_name": "New Invoice",
+      "description": "Start creating a new invoice",
+      "url": "./index.html",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "View History",
+      "short_name": "History",
+      "description": "View your saved invoice history",
+      "url": "./index.html#history",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

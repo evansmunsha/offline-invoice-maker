@@ -3092,3 +3092,44 @@ Would you like to contact support via email?`;
     );
   }
 }
+
+
+// Call this function inside your saveInvoice click handler
+function triggerNotification(title, body) {
+    // 1. Check if the browser supports notifications
+    if (!("Notification" in window)) {
+        console.log("This browser does not support desktop notification");
+        return;
+    }
+
+    // 2. Check permission status
+    if (Notification.permission === "granted") {
+        // 3. If allowed, create the notification
+        new Notification(title, {
+            body: body,
+            icon: "assets/icons/icon-192.png" // Shows your app icon in the notification
+        });
+    } 
+    else if (Notification.permission !== "denied") {
+        // 4. If not asked yet, request permission
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                new Notification(title, {
+                    body: body,
+                    icon: "assets/icons/icon-192.png"
+                });
+            }
+        });
+    }
+}
+
+// --- Usage Example ---
+// Find your save button in your existing code and add the call:
+/*
+document.getElementById('saveInvoice').addEventListener('click', () => {
+    // ... your existing save logic ...
+    
+    // Add this line at the end:
+    triggerNotification("Invoice Saved", "Your invoice has been saved successfully!");
+});
+*/
