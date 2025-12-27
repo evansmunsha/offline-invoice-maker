@@ -1,7 +1,7 @@
 {
   "name": "Offline Invoice Maker",
   "short_name": "Invoice Maker",
-  "start_url": "./index.html",
+  "start_url": "/",
   "display": "standalone",
   "scope": "./offline-invoice-maker",
   "background_color": "#ffffff",
