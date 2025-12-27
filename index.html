@@ -788,14 +788,19 @@
         <script src="js/pdf.js"></script>
         <script src="js/app.js"></script>
         <!-- Service Worker Registration -->
+        <!-- Service Worker Registration -->
         <script>
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('./sw.js')
+                    // We use window.location.pathname to automatically find the folder
+                    // This solves the issue of files being in a subfolder vs root
+                    const swPath = window.location.pathname + 'sw.js';
+                    
+                    navigator.serviceWorker.register(swPath)
                         .then((registration) => {
-                            console.log('Service Worker registered with scope:', registration.scope);
+                            console.log('✅ Service Worker registered with scope:', registration.scope);
                         }, (error) => {
-                            console.log('Service Worker registration failed:', error);
+                            console.log('❌ Service Worker registration failed:', error);
                         });
                 });
             }
