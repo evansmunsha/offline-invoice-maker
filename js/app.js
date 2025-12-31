@@ -2519,6 +2519,13 @@ window.closeAdModal = function (element) {
 };
 
 function setupPremiumModal() {
+
+  const purchaseBtn = document.getElementById("purchasePremium");
+
+if (purchaseBtn && isAndroidPWA()) {
+  purchaseBtn.onclick = purchasePremiumWithGooglePlay;
+}
+
   // Remove ads button
   document.getElementById("removeAds")?.addEventListener("click", () => {
     openPremiumModal();
@@ -2793,6 +2800,31 @@ function getUsageStats() {
 /* =========================
    GOOGLE PLAY BILLING (PWABuilder)
 ========================= */
+
+
+async function purchasePremiumWithGooglePlay() {
+  try {
+    if (typeof window.getDigitalGoodsService !== "function") {
+      alert("Google Play Billing not available.");
+      return;
+    }
+
+    const service = await window.getDigitalGoodsService();
+
+    await service.purchase({
+      itemId: "premium_unlock"
+    });
+
+    // Re-check ownership after purchase
+    await checkGooglePlayPremiumStatus();
+
+    alert("✅ Premium unlocked!");
+  } catch (err) {
+    console.error("Purchase failed:", err);
+    alert("❌ Purchase cancelled or failed");
+  }
+}
+
 
 async function checkGooglePlayPremiumStatus() {
   try {

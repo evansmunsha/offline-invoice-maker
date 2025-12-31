@@ -788,11 +788,19 @@
         <script src="js/pdf.js"></script>
         <script src="js/app.js"></script>
         <!-- Service Worker Registration -->
-         <script>
+            <script>
+                if ("serviceWorker" in navigator) {
+                    window.addEventListener("load", () => {
+                    navigator.serviceWorker.register("/sw.js");
+                    });
+                }
+            </script>
+
+         <!-- <script>
             if (typeof navigator.serviceWorker !== 'undefined') {
                 navigator.serviceWorker.register('sw.js')
             }
-         </script>
+         </script> -->
 
         <!-- Service Worker Registration -->
         <!-- <script>
