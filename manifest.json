@@ -13,8 +13,8 @@
   "description": "Create and manage invoices offline. Generate PDFs and store history on your device.",
   "icons": [
     {
-      "src": "/assets/icons/icon-192.png",
-      "sizes": "192x192",
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png"
     },
     {
