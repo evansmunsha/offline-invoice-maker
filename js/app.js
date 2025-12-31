@@ -2532,8 +2532,9 @@ function setupPremiumModal() {
     .getElementById("cancelPremium")
     ?.addEventListener("click", closePremiumModal);
   document
-    .getElementById("purchasePremium")
-    ?.addEventListener("click", handlePremiumPurchase);
+  .getElementById("purchasePremium")
+  ?.addEventListener("click", purchasePremiumWithGooglePlay);
+
 
   // Show premium modal after certain actions for free users
   let actionCount = parseInt(localStorage.getItem("actionCount") || "0");
@@ -2907,6 +2908,75 @@ function setupPlatformLinks() {
     });
   }
 }
+
+
+/* =========================
+   GOOGLE PLAY PURCHASE FLOW
+========================= */
+
+async function purchasePremiumWithGooglePlay() {
+  try {
+    // Ensure Google Play Billing is available
+    if (typeof window.getDigitalGoodsService !== "function") {
+      alert(
+        "Purchases are only available in the Android app installed from Google Play."
+      );
+      return;
+    }
+
+    // Disable button + show loading
+    const btn = document.getElementById("purchasePremium");
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = "🔄 Processing...";
+    }
+
+    // Connect to Google Play
+    const service = await window.getDigitalGoodsService();
+
+    // Optional: fetch product info (safe check)
+    const details = await service.getDetails(["premium_unlock"]);
+    if (!details || details.length === 0) {
+      throw new Error("Premium product not found on Google Play");
+    }
+
+    // 🔥 THIS LINE OPENS GOOGLE PLAY PAYMENT UI
+    const purchase = await service.purchase({
+      itemId: "premium_unlock",
+    });
+
+    // Verify purchase result
+    if (purchase && purchase.purchaseState === "purchased") {
+      activatePremium();
+
+      showToast(
+        "Success 🎉",
+        "Premium unlocked permanently!",
+        "success"
+      );
+
+      closePremiumModal();
+    } else {
+      throw new Error("Purchase was not completed");
+    }
+  } catch (err) {
+    console.error("Purchase failed:", err);
+
+    showToast(
+      "Payment failed",
+      "Purchase cancelled or failed. Try again.",
+      "error"
+    );
+  } finally {
+    // Restore button
+    const btn = document.getElementById("purchasePremium");
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = "🚀 Purchase via Google Play – $4.99";
+    }
+  }
+}
+
 
 /* =========================
    USAGE STATS DISPLAY
