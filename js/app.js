@@ -15,6 +15,47 @@ let hasUnsavedChanges = false;
 let selectedInvoices = new Set();
 let isPremiumUser = false;
 
+/* =========================
+   GOOGLE PLAY BILLING LISTENER
+========================= */
+// Listen for purchase notifications from Android native app
+window.addEventListener("message", (e) => {
+  try {
+    // Handle both JSON strings and objects
+    const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+    
+    if (data && data.type === "PURCHASE_COMPLETE") {
+      // Check if it's the premium product
+      if (data.productId === "premium_unlock" || data.productId === "com.evansmunsha.invoicemaker.premium") {
+        // Set premium status in localStorage
+        localStorage.setItem("premiumUser", "true");
+        localStorage.setItem("purchaseMethod", "google_play");
+        localStorage.setItem("purchaseDate", new Date().toISOString());
+        
+        // Update the app's runtime variable
+        isPremiumUser = true;
+        
+        // Update UI immediately
+        hideAds();
+        updateUIForPremiumStatus();
+        
+        // Show success message
+        showToast(
+          "🎉 Premium Unlocked!",
+          "Thank you for upgrading! Enjoy unlimited invoices and watermark-free PDFs.",
+          "success",
+          5000
+        );
+        
+        console.log("Premium purchase confirmed from Android app");
+      }
+    }
+  } catch (err) {
+    // Silently ignore malformed messages from other sources
+    console.debug("Message received (not a purchase notification):", err);
+  }
+});
+
 // DOM references
 const itemsDiv = document.getElementById("items");
 const totalSpan = document.getElementById("total");
@@ -228,6 +269,14 @@ window.addEventListener("load", async () => {
   setSmartDefaults(); // set smart defaults
   loadHistory(); // load saved invoices
   addItemRow(); // first item row
+
+  // 🧪 DEV MODE: Simulate premium purchase for testing
+  // Remove this block before releasing to production!
+  if (location.search.includes("dev_premium=1")) {
+    localStorage.setItem("premiumUser", "true");
+    isPremiumUser = true;
+    console.warn("⚠️ DEV MODE ENABLED: Premium activated via URL parameter");
+  }
 
   // Initialize currency selector with saved preference
   const currencySelect = document.getElementById("currency");
@@ -3195,43 +3244,84 @@ Would you like to contact support via email?`;
   }
 }
 
-
-/* // Call this function inside your saveInvoice click handler
-function triggerNotification(title, body) {
-    // 1. Check if the browser supports notifications
-    if (!("Notification" in window)) {
-        console.log("This browser does not support desktop notification");
-        return;
+// Add near initialization in js/app.js
+window.addEventListener('message', (e) => {
+  try {
+    const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    if (data && data.type === 'PURCHASE_COMPLETE' && data.productId === 'premium_unlock') {
+      localStorage.setItem('premiumUser', 'true');
+      isPremiumUser = true; // ensure runtime flag used in app.js updates
+      showToast('Premium unlocked', 'Thank you for upgrading!', 'success');
     }
-
-    // 2. Check permission status
-    if (Notification.permission === "granted") {
-        // 3. If allowed, create the notification
-        new Notification(title, {
-            body: body,
-            icon: "assets/icons/icon-192.png" // Shows your app icon in the notification
-        });
-    } 
-    else if (Notification.permission !== "denied") {
-        // 4. If not asked yet, request permission
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                new Notification(title, {
-                    body: body,
-                    icon: "assets/icons/icon-192.png"
-                });
-            }
-        });
-    }
-} */
-
-// --- Usage Example ---
-// Find your save button in your existing code and add the call:
-/*
-document.getElementById('saveInvoice').addEventListener('click', () => {
-    // ... your existing save logic ...
-    
-    // Add this line at the end:
-    triggerNotification("Invoice Saved", "Your invoice has been saved successfully!");
+  } catch (err) { /* ignore malformed messages */ }
 });
-*/
+
+/* =========================
+   DEBUGGING TOOLS FOR PAYMENT ISSUES
+========================= */
+
+// Exposed globally for DevTools console debugging
+window.invoiceMakerDebug = {
+  // Check if Digital Goods API is available
+  checkBillingAPI: async () => {
+    console.log("=== BILLING API CHECK ===");
+    console.log("1. Digital Goods Service available:", typeof window.getDigitalGoodsService === 'function' ? "✅ YES" : "❌ NO");
+    
+    if (typeof window.getDigitalGoodsService === 'function') {
+      try {
+        const service = await window.getDigitalGoodsService();
+        console.log("2. Service connected: ✅ YES");
+        
+        const details = await service.getDetails(['premium_unlock']);
+        console.log("3. Product details:", details);
+        
+        if (details.length > 0) {
+          console.log("   Product ID:", details[0].itemId);
+          console.log("   Price:", details[0].price);
+          console.log("   ✅ READY TO PURCHASE");
+        } else {
+          console.log("   ❌ Product 'premium_unlock' not found on Play Store");
+          console.log("   → Check Google Play Console product ID");
+        }
+      } catch (err) {
+        console.error("   ❌ Error:", err.message);
+      }
+    } else {
+      console.log("❌ Not running in PWABuilder app or Digital Goods API not enabled");
+      console.log("   → This only works on Play Store installed app");
+    }
+  },
+  
+  // Check premium status
+  checkPremiumStatus: () => {
+    console.log("=== PREMIUM STATUS ===");
+    console.log("Runtime flag (isPremiumUser):", isPremiumUser ? "✅ PREMIUM" : "❌ FREE");
+    console.log("localStorage.premiumUser:", localStorage.getItem('premiumUser') || "NOT SET");
+    console.log("Purchase date:", localStorage.getItem('purchaseDate') || "NO PURCHASE");
+    console.log("Purchase method:", localStorage.getItem('purchaseMethod') || "NONE");
+  },
+  
+  // Simulate a purchase (for testing)
+  simulatePurchase: () => {
+    console.log("=== SIMULATING PURCHASE ===");
+    localStorage.setItem('premiumUser', 'true');
+    isPremiumUser = true;
+    hideAds();
+    updateUIForPremiumStatus();
+    showToast('Test', 'Premium simulated', 'success');
+    console.log("✅ Premium activated (test mode)");
+  },
+  
+  // Show all billing info
+  fullDiagnostic: async () => {
+    console.log("\n🔍 FULL INVOICE MAKER BILLING DIAGNOSTIC\n");
+    await window.invoiceMakerDebug.checkBillingAPI();
+    console.log("\n");
+    window.invoiceMakerDebug.checkPremiumStatus();
+    console.log("\n✅ Diagnostic complete\n");
+  }
+};
+
+// Make it easy to use from console
+console.log("💡 TIP: Run this in console to diagnose payment issues:");
+console.log("  await invoiceMakerDebug.fullDiagnostic()");
