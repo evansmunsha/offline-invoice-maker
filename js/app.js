@@ -2957,7 +2957,7 @@ function setupPlatformLinks() {
       e.preventDefault();
       // Replace with your actual Play Store URL
       const playStoreUrl =
-        "https://play.google.com/store/apps/details?id=YOUR_APP_ID";
+        "https://play.google.com/store/apps/details?id=app.vercel.offline_invoice_maker.twa";
       window.open(playStoreUrl, "_blank");
       closePremiumModal();
 
@@ -2976,7 +2976,7 @@ function setupPlatformLinks() {
       e.preventDefault();
       // For web users, redirect to Play Store
       const playStoreUrl =
-        "https://play.google.com/store/apps/details?id=YOUR_APP_ID";
+        "https://play.google.com/store/apps/details?id=app.vercel.offline_invoice_maker.twa";
       window.open(playStoreUrl, "_blank");
       closePremiumModal();
 
