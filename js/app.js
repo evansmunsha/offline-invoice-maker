@@ -2649,10 +2649,12 @@ async function purchaseWithGooglePlay() {
     purchaseBtn.disabled = true;
 
     // Get Digital Goods Service (PWABuilder injected)
-    const service = await window.getDigitalGoodsService();
+    const service = await window.getDigitalGoodsService("play");
+    console.log("Digital Goods Service connected:", service);
 
     // Get product details for our premium unlock
     const details = await service.getDetails(["premium_unlock"]);
+    console.log("Product details:", details);
 
     if (details.length === 0) {
       throw new Error("Premium upgrade not available");
@@ -2853,12 +2855,15 @@ function getUsageStats() {
 
 async function purchasePremiumWithGooglePlay() {
   try {
+    console.log("Starting Google Play purchase...");
+    
     if (typeof window.getDigitalGoodsService !== "function") {
       alert("Google Play Billing not available.");
       return;
     }
 
-    const service = await window.getDigitalGoodsService();
+    const service = await window.getDigitalGoodsService("play");
+    console.log("Digital Goods Service connected:", service);
 
     await service.purchase({
       itemId: "premium_unlock"
@@ -2882,7 +2887,7 @@ async function checkGooglePlayPremiumStatus() {
       return false;
     }
 
-    const service = await window.getDigitalGoodsService();
+    const service = await window.getDigitalGoodsService("play");
     const purchases = await service.listPurchases();
 
     // Check if premium_unlock was purchased
@@ -2955,9 +2960,8 @@ function setupPlatformLinks() {
   if (playStoreLink) {
     playStoreLink.addEventListener("click", (e) => {
       e.preventDefault();
-      // Replace with your actual Play Store URL
       const playStoreUrl =
-        "https://play.google.com/store/apps/details?id=app.vercel.offline_invoice_maker.twa";
+        "https://play.google.com/store/apps/details?id=io.github.evansmunsha.twa";
       window.open(playStoreUrl, "_blank");
       closePremiumModal();
 
@@ -2974,9 +2978,8 @@ function setupPlatformLinks() {
   if (purchaseBtn && !isAndroidPWA()) {
     purchaseBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      // For web users, redirect to Play Store
       const playStoreUrl =
-        "https://play.google.com/store/apps/details?id=app.vercel.offline_invoice_maker.twa";
+        "https://play.google.com/store/apps/details?id=io.github.evansmunsha.twa";
       window.open(playStoreUrl, "_blank");
       closePremiumModal();
 
@@ -3013,10 +3016,12 @@ async function purchasePremiumWithGooglePlay() {
     }
 
     // Connect to Google Play
-    const service = await window.getDigitalGoodsService();
+    const service = await window.getDigitalGoodsService("play");
+    console.log("Digital Goods Service connected:", service);
 
     // Optional: fetch product info (safe check)
     const details = await service.getDetails(["premium_unlock"]);
+    console.log("Product details:", details);
     if (!details || details.length === 0) {
       throw new Error("Premium product not found on Google Play");
     }
@@ -3269,10 +3274,11 @@ window.invoiceMakerDebug = {
     
     if (typeof window.getDigitalGoodsService === 'function') {
       try {
-        const service = await window.getDigitalGoodsService();
+        const service = await window.getDigitalGoodsService("play");
         console.log("2. Service connected: ✅ YES");
         
         const details = await service.getDetails(['premium_unlock']);
+        console.log("3. Product details:", details);
         console.log("3. Product details:", details);
         
         if (details.length > 0) {
