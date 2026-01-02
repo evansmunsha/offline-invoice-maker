@@ -2649,7 +2649,7 @@ async function purchaseWithGooglePlay() {
     purchaseBtn.disabled = true;
 
     // Get Digital Goods Service (PWABuilder injected)
-    const service = await window.getDigitalGoodsService("play");
+    const service = await window.getDigitalGoodsService("play.google.com/billing");
     console.log("Digital Goods Service connected:", service);
 
     // Get product details for our premium unlock
@@ -3016,7 +3016,7 @@ async function purchasePremiumWithGooglePlay() {
     }
 
     // Connect to Google Play
-    const service = await window.getDigitalGoodsService("play");
+    const service = await window.getDigitalGoodsService("play.google.com/billing");
     console.log("Digital Goods Service connected:", service);
 
     // Optional: fetch product info (safe check)
@@ -3274,7 +3274,7 @@ window.invoiceMakerDebug = {
     
     if (typeof window.getDigitalGoodsService === 'function') {
       try {
-        const service = await window.getDigitalGoodsService("play");
+        const service = await window.getDigitalGoodsService("play.google.com/billing");
         console.log("2. Service connected: ✅ YES");
         
         const details = await service.getDetails(['premium_unlock']);
