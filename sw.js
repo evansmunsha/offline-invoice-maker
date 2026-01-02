@@ -7,19 +7,19 @@ const CACHE_NAME = "offline-invoice-cache-v1";
 
 /* Files required for offline use */
 const PRECACHE_ASSETS = [
-  "/offline-invoice-maker/",
-  "/offline-invoice-maker/index.html",
-  "/offline-invoice-maker/manifest.json",
+  "/",
+  "/index.html",
+  "/manifest.json",
 
-  "/offline-invoice-maker/css/style.css",
+  "/css/style.css",
 
-  "/offline-invoice-maker/js/app.js",
-  "/offline-invoice-maker/js/storage.js",
-  "/offline-invoice-maker/js/pdf.js",
+  "/js/app.js",
+  "/js/storage.js",
+  "/js/pdf.js",
 
-  "/offline-invoice-maker/assets/logo.png",
-  "/offline-invoice-maker/assets/icons/icon-192.png",
-  "/offline-invoice-maker/assets/icons/icon-512.png"
+  "/assets/logo.png",
+  "/assets/icons/icon-192.png",
+  "/assets/icons/icon-512.png"
 ];
 
 
