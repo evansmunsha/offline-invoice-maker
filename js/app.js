@@ -3000,13 +3000,15 @@ function setupPlatformLinks() {
 
 async function purchasePremiumWithGooglePlay() {
   try {
+    console.log("🔍 Starting purchase flow...");
+    
     // Ensure Google Play Billing is available
     if (typeof window.getDigitalGoodsService !== "function") {
-      alert(
-        "Purchases are only available in the Android app installed from Google Play."
-      );
+      console.error("❌ Digital Goods API not available");
+      alert("Purchases are only available in the Android app installed from Google Play.");
       return;
     }
+    console.log("✅ Digital Goods API is available");
 
     // Disable button + show loading
     const btn = document.getElementById("purchasePremium");
@@ -3016,43 +3018,61 @@ async function purchasePremiumWithGooglePlay() {
     }
 
     // Connect to Google Play
+    console.log("🔗 Connecting to Google Play Billing...");
     const service = await window.getDigitalGoodsService("play.google.com/billing");
-    console.log("Digital Goods Service connected:", service);
+    console.log("✅ Service connected:", service);
 
-    // Optional: fetch product info (safe check)
-    const details = await service.getDetails(["premium_unlock"]);
-    console.log("Product details:", details);
-    if (!details || details.length === 0) {
-      throw new Error("Premium product not found on Google Play");
+    if (!service) {
+      throw new Error("Failed to get Digital Goods Service");
     }
 
+    // Fetch product info
+    console.log("📦 Fetching product details for 'premium_unlock'...");
+    const details = await service.getDetails(["premium_unlock"]);
+    console.log("✅ Product details:", details);
+    
+    if (!details || details.length === 0) {
+      console.error("❌ Product 'premium_unlock' not found in Play Console");
+      throw new Error("Product 'premium_unlock' not found. Check Google Play Console.");
+    }
+
+    console.log("💰 Product price:", details[0].price);
+    console.log("📝 Product title:", details[0].title);
+
     // 🔥 THIS LINE OPENS GOOGLE PLAY PAYMENT UI
+    console.log("🛒 Opening Google Play payment UI...");
     const purchase = await service.purchase({
       itemId: "premium_unlock",
     });
 
+    console.log("✅ Purchase completed, response:", purchase);
+
     // Verify purchase result
-    if (purchase && purchase.purchaseState === "purchased") {
+    if (purchase && (purchase.purchaseState === "purchased" || purchase.purchaseToken)) {
+      console.log("🎉 Purchase successful! Purchase token:", purchase.purchaseToken);
       activatePremium();
 
-      showToast(
-        "Success 🎉",
-        "Premium unlocked permanently!",
-        "success"
-      );
-
+      showToast("Success 🎉", "Premium unlocked permanently!", "success");
       closePremiumModal();
     } else {
-      throw new Error("Purchase was not completed");
+      console.error("❌ Purchase state:", purchase?.purchaseState);
+      throw new Error("Purchase was not completed successfully");
     }
   } catch (err) {
-    console.error("Purchase failed:", err);
+    console.error("❌ Purchase failed:", err);
+    console.error("Error message:", err.message);
 
-    showToast(
-      "Payment failed",
-      "Purchase cancelled or failed. Try again.",
-      "error"
-    );
+    let errorMessage = "Purchase cancelled or failed. Try again.";
+    
+    if (err.message.includes("not found")) {
+      errorMessage = "Premium product not found on Play Store. Check product ID."; 
+    } else if (err.message.includes("Digital Goods")) {
+      errorMessage = "Google Play Billing is not available. Use Play Store app.";
+    } else if (err.name === "NotAllowedError") {
+      errorMessage = "Purchase cancelled.";
+    }
+
+    showToast("Payment Failed", errorMessage, "error");
   } finally {
     // Restore button
     const btn = document.getElementById("purchasePremium");
