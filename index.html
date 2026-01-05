@@ -787,31 +787,23 @@
         <script src="js/pdf.js"></script>
         <script src="js/app.js"></script>
         <!-- Service Worker Registration -->
-            <script>
-                if ("serviceWorker" in navigator) {
-                    window.addEventListener("load", () => {
-                    navigator.serviceWorker.register("sw.js");
-                    });
-                }
-            </script>
-
-         <!-- <script>
-            if (typeof navigator.serviceWorker !== 'undefined') {
-                navigator.serviceWorker.register('sw.js')
-            }
-         </script> -->
-
-        <!-- Service Worker Registration -->
-        <!-- <script>
+        <script>
             if ("serviceWorker" in navigator) {
                 window.addEventListener("load", () => {
-                navigator.serviceWorker
-                    .register("/sw.js")
-                    .then(() => console.log("Service Worker registered"))
-                    .catch(err => console.error("SW failed:", err));
+                    const swPath = window.location.pathname.includes('github.io') 
+                        ? '/offline-invoice-maker/sw.js' 
+                        : '/sw.js';
+                    
+                    navigator.serviceWorker.register(swPath)
+                        .then(reg => {
+                            console.log("✅ Service Worker registered:", reg);
+                        })
+                        .catch(err => {
+                            console.error("❌ Service Worker registration failed:", err);
+                        });
                 });
             }
-        </script> -->
+        </script>
 
 
     </body>
