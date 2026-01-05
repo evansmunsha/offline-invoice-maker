@@ -2411,28 +2411,12 @@ function shareBulkWhatsApp(invoices) {
 ========================= */
 
 async function initializeMonetization() {
-  // Check Google Play Billing first (PWABuilder)
-  await checkGooglePlayPremiumStatus();
-
-  // Fallback to localStorage for web version
-  if (!isPremiumUser) {
-    isPremiumUser = localStorage.getItem("premiumUser") === "true";
-  }
-
-  // Initialize ads for free users
-  if (!isPremiumUser) {
-    showAds();
-    showUsageStats();
-  }
-
-  // Setup premium modal handlers
-  setupPremiumModal();
-
-  // Setup platform-specific links
-  setupPlatformLinks();
-
-  // Update UI based on premium status
-  updateUIForPremiumStatus();
+  // Temporarily disabled: All users see ads until Google Play billing is fixed
+  isPremiumUser = false;
+  
+  // Always show ads for all users
+  showAds();
+  showUsageStats();
 
   // Setup usage stats handlers
   setupUsageStatsHandlers();
@@ -2568,41 +2552,15 @@ window.closeAdModal = function (element) {
 };
 
 function setupPremiumModal() {
-
+  // Temporarily disabled: Hide all premium/upgrade UI
+  const removeAdsBtn = document.getElementById("removeAds");
+  if (removeAdsBtn) removeAdsBtn.style.display = "none";
+  
   const purchaseBtn = document.getElementById("purchasePremium");
-
-if (purchaseBtn && isAndroidPWA()) {
-  purchaseBtn.onclick = purchasePremiumWithGooglePlay;
-}
-
-  // Remove ads button
-  document.getElementById("removeAds")?.addEventListener("click", () => {
-    openPremiumModal();
-  });
-
-  // Premium modal buttons
-  document
-    .getElementById("closePremiumModal")
-    ?.addEventListener("click", closePremiumModal);
-  document
-    .getElementById("cancelPremium")
-    ?.addEventListener("click", closePremiumModal);
-  document
-  .getElementById("purchasePremium")
-  ?.addEventListener("click", purchasePremiumWithGooglePlay);
-
-
-  // Show premium modal after certain actions for free users
-  let actionCount = parseInt(localStorage.getItem("actionCount") || "0");
-  actionCount++;
-  localStorage.setItem("actionCount", actionCount.toString());
-
-  // Show premium modal every 5 actions for free users
-  if (!isPremiumUser && actionCount % 5 === 0) {
-    setTimeout(() => {
-      openPremiumModal();
-    }, 2000);
-  }
+  if (purchaseBtn) purchaseBtn.style.display = "none";
+  
+  const premiumModal = document.getElementById("premiumModal");
+  if (premiumModal) premiumModal.style.display = "none";
 }
 
 function openPremiumModal() {

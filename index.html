@@ -251,7 +251,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="usage-upgrade">
+                    <div class="usage-upgrade" style="display: none;">
                         <p>Need more? <a href="#" id="upgradeFromStats">Upgrade to Premium</a> for unlimited usage!</p>
                     </div>
                 </div>
@@ -260,7 +260,6 @@
                 <div id="adContainer" class="ad-container hidden">
                     <div class="ad-header">
                         <span class="ad-label">Advertisement</span>
-                        <button id="removeAds" class="remove-ads-btn">Remove Ads - $4.99</button>
                     </div>
                     <div id="adSpace" class="ad-space">
                         <!-- Google AdSense or other ads will be inserted here -->
@@ -279,9 +278,9 @@
                 </div>
             </section>
 
-            <!-- Premium Upgrade Modal -->
-            <div id="premiumModal" class="modal hidden" role="dialog" aria-labelledby="premiumModalTitle" aria-modal="true">
-                <div class="modal-content">
+            <!-- Premium Upgrade Modal - DISABLED FOR NOW -->
+            <div id="premiumModal" class="modal hidden" role="dialog" aria-labelledby="premiumModalTitle" aria-modal="true" style="display: none !important;">
+                <div class="modal-content" style="display: none !important;">
                     <div class="modal-header">
                         <h3 id="premiumModalTitle">Upgrade to Premium</h3>
                         <button class="modal-close" id="closePremiumModal" aria-label="Close premium dialog">
@@ -791,7 +790,7 @@
             <script>
                 if ("serviceWorker" in navigator) {
                     window.addEventListener("load", () => {
-                    navigator.serviceWorker.register("/sw.js");
+                    navigator.serviceWorker.register("sw.js");
                     });
                 }
             </script>
