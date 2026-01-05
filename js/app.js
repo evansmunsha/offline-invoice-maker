@@ -2440,24 +2440,45 @@ function hideAds() {
 }
 
 function loadAdNetwork() {
-  // Example: Load Google AdSense
-  // This would be replaced with actual ad network code
-  console.log("Loading ads for free users...");
+  // Google AdSense/AdMob Integration
+  console.log("Loading Google AdSense ads...");
 
-  // Simulate ad loading
   const adSpace = document.getElementById("adSpace");
   if (adSpace && !isPremiumUser) {
-    // You can replace this with actual Google AdSense code
+    // Push the adsbygoogle configuration
     setTimeout(() => {
-      const demoAd = adSpace.querySelector(".demo-ad");
-      if (demoAd) {
-        demoAd.style.opacity = "1";
-        demoAd.style.transform = "scale(1)";
-
-        // Setup Learn More button functionality
-        setupAdLearnMoreButton();
+      try {
+        if (window.adsbygoogle && window.adsbygoogle.push) {
+          (adsbygoogle = window.adsbygoogle || []).push({});
+          console.log("✅ Ad loaded successfully");
+        }
+      } catch (err) {
+        console.log("⚠️ AdSense not available (normal in development):", err.message);
+        // Fallback to demo ad if AdSense fails
+        showDemoAdFallback();
       }
-    }, 1000);
+    }, 500);
+  }
+}
+
+function showDemoAdFallback() {
+  // Fallback to demo ad if Google ads not available
+  const adSpace = document.getElementById("adSpace");
+  if (adSpace) {
+    adSpace.innerHTML = `
+      <div class="demo-ad">
+        <div class="ad-logo">💼</div>
+        <p class="ad-title"><strong>Grow Your Business</strong></p>
+        <p class="ad-subtitle">Get paid faster with professional invoices</p>
+        <div class="ad-features">
+          <span class="ad-feature">✓ WhatsApp sharing</span>
+          <span class="ad-feature">✓ Offline ready</span>
+          <span class="ad-feature">✓ Multi-currency</span>
+        </div>
+        <a href="#" class="ad-link">Learn More →</a>
+      </div>
+    `;
+    setupAdLearnMoreButton();
   }
 }
 
