@@ -783,18 +783,14 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
         <!-- App scripts -->
-        <script src="js/storage.js"></script>
-        <script src="js/pdf.js"></script>
-        <script src="js/app.js"></script>
+        <script src="./js/storage.js"></script>
+        <script src="./js/pdf.js"></script>
+        <script src="./js/app.js"></script>
         <!-- Service Worker Registration -->
         <script>
             if ("serviceWorker" in navigator) {
                 window.addEventListener("load", () => {
-                    const swPath = window.location.pathname.includes('github.io') 
-                        ? '/offline-invoice-maker/sw.js' 
-                        : '/sw.js';
-                    
-                    navigator.serviceWorker.register(swPath)
+                    navigator.serviceWorker.register('./sw.js')
                         .then(reg => {
                             console.log("✅ Service Worker registered:", reg);
                         })

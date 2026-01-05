@@ -3,24 +3,20 @@
    Offline-first PWA (PWABuilder compatible)
 ================================================= */
 
-const CACHE_NAME = "offline-invoice-cache-v1";
+const CACHE_NAME = "offline-invoice-cache-v2";
 
-// Detect if running on GitHub Pages or local
-const isGitHubPages = self.location.href.includes('github.io');
-const BASE_PATH = isGitHubPages ? '/offline-invoice-maker' : '';
-
-/* Files required for offline use */
+/* Files required for offline use - use relative paths */
 const PRECACHE_ASSETS = [
-  BASE_PATH + '/',
-  BASE_PATH + '/index.html',
-  BASE_PATH + '/manifest.json',
-  BASE_PATH + '/css/style.css',
-  BASE_PATH + '/js/app.js',
-  BASE_PATH + '/js/storage.js',
-  BASE_PATH + '/js/pdf.js',
-  BASE_PATH + '/assets/logo.png',
-  BASE_PATH + '/assets/icons/icon-192.png',
-  BASE_PATH + '/assets/icons/icon-512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './css/style.css',
+  './js/app.js',
+  './js/storage.js',
+  './js/pdf.js',
+  './assets/logo.png',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png'
 ];
 
 
