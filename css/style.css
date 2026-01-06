@@ -1212,7 +1212,22 @@ select:focus-visible {
     border-radius: 8px;
     margin-top: 1rem;
     overflow: hidden;
+    width: 100%;
 }
+
+.ad-space {
+    padding: 1rem;
+    min-height: 120px;
+    min-width: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+
+
+
 
 .ad-container.hidden {
     display: none;
@@ -1252,13 +1267,7 @@ select:focus-visible {
     transform: translateY(-1px);
 }
 
-.ad-space {
-    padding: 1rem;
-    min-height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+
 
 .demo-ad {
     text-align: center;

@@ -1,3 +1,5 @@
+//ad-config.js
+
 /* =====================================================
    AD NETWORK CONFIGURATION
    Centralized place to manage ad unit IDs
@@ -7,7 +9,7 @@ const AD_CONFIG = {
   // TEST IDs (provided by Google)
   // Use these for development and testing
   TEST: {
-    APP_ID: "ca-app-pub-3940256099942544~3347511713",
+    APP_ID: "ca-app-pub-3267288412255550/2274937759",
     BANNER_SLOT: "6300978111",
     INTERSTITIAL_SLOT: "1033173712",
     REWARDED_SLOT: "6978759866"
@@ -18,7 +20,7 @@ const AD_CONFIG = {
   // Step 2: Add your app (io.github.evansmunsha.twa)
   // Step 3: Create ad units and copy the IDs here
   PRODUCTION: {
-    APP_ID: "ca-app-pub-xxxxxxxxxxxxxxxx~yyyyyyyyyy", // Replace with your App ID
+    APP_ID: "ca-app-pub-3267288412255550~6408450423", // Replace with your App ID
     BANNER_SLOT: "ca-pub-xxxxxxxxxxxxxxxxxxxxxxxx",    // Replace with your Banner Ad Unit ID
     INTERSTITIAL_SLOT: "ca-pub-xxxxxxxxxxxxxxxxxxxxxxxx", // For future use
     REWARDED_SLOT: "ca-pub-xxxxxxxxxxxxxxxxxxxxxxxx"     // For future use
