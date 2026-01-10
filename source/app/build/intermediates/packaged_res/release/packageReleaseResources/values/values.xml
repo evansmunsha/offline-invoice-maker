@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <bool name="enableNotification">true</bool>
+    <bool name="enableSiteSettingsShortcut">true</bool>
+    <color name="backgroundColor">#FFFFFF</color>
+    <color name="colorPrimary">#FFFFFF</color>
+    <color name="colorPrimaryDark">#FFFFFF</color>
+    <color name="navigationColor">#FFFFFF</color>
+    <color name="navigationColorDark">#FFFFFF</color>
+    <color name="navigationDividerColor">#FFFFFF</color>
+    <color name="navigationDividerColorDark">#FFFFFF</color>
+    <color name="shortcut_background">#F5F5F5</color>
+    <integer name="splashScreenFadeOutDuration">300</integer>
+    <string name="appName" translatable="false">Invoice Maker</string>
+    <string name="assetStatements">
+    [{
+        \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+        \"target\": {
+            \"namespace\": \"web\",
+            \"site\": \"https://evansmunsha.github.io\"
+        }
+    }]
+    
+  </string>
+    <string name="fallbackType" translatable="false">customtabs</string>
+    <string name="fullScopeUrl" translatable="false">https://evansmunsha.github.io/offline-invoice-maker/</string>
+    <string name="generatorApp" translatable="false">PWABuilder</string>
+    <string name="hostName" translatable="false">evansmunsha.github.io</string>
+    <string name="launchUrl" translatable="false">https://evansmunsha.github.io/offline-invoice-maker/</string>
+    <string name="launcherName" translatable="false">Invoice Maker</string>
+    <string name="orientation" translatable="false">portrait-primary</string>
+    <string name="providerAuthority" translatable="false">io.github.evansmunsha.twa.fileprovider</string>
+    <string name="shortcut_name_0" translatable="false">New Invoice</string>
+    <string name="shortcut_short_name_0" translatable="false">New</string>
+    <string name="webManifestUrl" translatable="false">https://evansmunsha.github.io/offline-invoice-maker/manifest.json</string>
+</resources>

@@ -153,7 +153,7 @@ const playStoreUrl = "https://play.google.com/store/apps/details?id=YOUR_APP_ID"
 
 **AFTER:** (Replace with your actual package ID)
 ```javascript
-const playStoreUrl = "https://play.google.com/store/apps/details?id=com.evansmunsha.invoicemaker";
+const playStoreUrl = "https://play.google.com/store/apps/details?id=YOUR_APP_ID";
 ```
 
 ### **Location 2: Line ~2970** (purchaseBtn fallback)
@@ -164,7 +164,7 @@ const playStoreUrl = "https://play.google.com/store/apps/details?id=YOUR_APP_ID"
 
 **AFTER:**
 ```javascript
-const playStoreUrl = "https://play.google.com/store/apps/details?id=com.evansmunsha.invoicemaker";
+const playStoreUrl = "https://play.google.com/store/apps/details?id=YOUR_APP_ID";
 ```
 
 ---

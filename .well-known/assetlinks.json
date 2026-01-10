@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.evansmunsha.twa",
+      "sha256_cert_fingerprints": [
+        "A4:F9:DA:C9:F5:AB:8D:BA:10:DC:E2:90:BD:01:DF:30:C2:5B:7C:EA:6A:DD:F5:92:CC:54:24:42:DC:CC:32:69"
+      ]
+    }
+  }
+]
