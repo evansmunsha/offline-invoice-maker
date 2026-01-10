@@ -1,224 +1,274 @@
-# 🔧 PWABuilder Payment Fix - Android Only
+# 🔧 PWABuilder Payment Fix - Complete Guide
 
-Your code is correct, but **the Android wrapper from PWABuilder might not be configured for Google Play Billing**. This guide fixes it.
-
----
-
-## ✅ **Your Current Web Code Status**
-
-Your `js/app.js` already has:
-- ✅ `purchasePremiumWithGooglePlay()` - Calls Digital Goods API
-- ✅ `checkGooglePlayPremiumStatus()` - Checks if user purchased
-- ✅ Message listener for purchase notifications
-- ✅ `activatePremium()` function to unlock features
-
-**This is all correct.** The problem is the **Android wrapper configuration**, not the web code.
+Your payment code has been updated to use the **correct Payment Request API** approach. This guide explains how to test and deploy it.
 
 ---
 
-## 🔴 **Why Payment Isn't Working**
+## ✅ **What Was Fixed**
 
-The Digital Goods API (`window.getDigitalGoodsService`) **only works in these cases:**
+### Previous Issues:
+1. ❌ Inconsistent service URL (`https://play.google.com/billing` vs `play.google.com/billing`)
+2. ❌ Using non-existent `service.purchase()` method
+3. ❌ Wrong acknowledge method signature
 
-1. ✅ Trusted Web Activity (TWA) on Google Play Store
-2. ✅ PWABuilder-generated Android app on Google Play Store  
-3. ❌ Local testing (Android Studio emulator)
-4. ❌ Side-loaded APK not from Play Store
-5. ❌ Browser preview
-
-**If you're testing locally or side-loaded, the Digital Goods API returns `undefined`.**
-
----
-
-## 🎯 **Fix for PWABuilder (Step by Step)**
-
-### **Step 1: Verify Product Configuration in Google Play Console**
-
-1. Go to https://play.google.com/console
-2. Select your app
-3. Go to **Monetization > Products > In-app products**
-4. Find or create product with ID: **`premium_unlock`**
-5. **IMPORTANT:** Copy the exact product ID (case-sensitive!)
-6. Make sure status is **"Active"**
-
-### **Step 2: Check Your PWABuilder Configuration**
-
-When you generated the Android APK from PWABuilder, you needed to configure:
-
-1. Go to https://www.pwabuilder.com (or your PWABuilder project)
-2. Enter your PWA URL
-3. Click **"Generate"** → **"Android"**
-4. Look for these settings:
-
-```
-✅ Package ID: com.evansmunsha.invoicemaker (or your package name)
-✅ App Name: Invoice Maker
-✅ Signing Key: (generate if you don't have one)
-✅ Digital Goods Service: ENABLED
-✅ Google Play Billing: ENABLED (if available)
-```
-
-**If these weren't set, regenerate the APK with these options enabled.**
-
-### **Step 3: Verify Product ID Matches Everywhere**
-
-Check **all 3 places** have the same product ID:
-
-#### A. In Google Play Console
-```
-Product ID: premium_unlock
-```
-
-#### B. In your web code (js/app.js, lines ~3020)
-```javascript
-const purchase = await service.purchase({
-  itemId: "premium_unlock",  // ← MUST MATCH exactly
-});
-```
-
-#### C. In getDetails call (js/app.js, lines ~3015)
-```javascript
-const details = await service.getDetails(["premium_unlock"]);  // ← MUST MATCH
-```
-
-**If ANY of these don't match, purchases fail silently.**
-
-### **Step 4: Upload APK to Play Store (Internal Testing Track)**
-
-Digital Goods API **only works on Play Store**. Do this:
-
-1. In Google Play Console → Create a new release
-2. Select **Internal Testing** track (cheapest way to test)
-3. Upload your PWABuilder-generated APK
-4. Set as Release → Publish
-5. Add yourself as tester
-6. Install app via Play Store link on your Android device
-7. **Now Digital Goods API will work**
-
-### **Step 5: Test the Purchase Flow**
-
-1. Open the app from Play Store
-2. Try to purchase premium
-3. You should see **Google Play payment screen**
-4. Complete payment (use test card if available)
-5. Check Logcat for: `purchase confirmation received`
+### New Correct Implementation:
+1. ✅ Consistent URL: `https://play.google.com/billing`
+2. ✅ Uses **Payment Request API** for purchases (the correct way!)
+3. ✅ Proper acknowledge flow
+4. ✅ Better error handling and logging
 
 ---
 
-## 🐛 **Debugging Steps**
+## 🎯 **How Google Play Billing Works in TWA**
 
-### **Test 1: Check if Digital Goods API is Available**
+The Digital Goods API does **NOT** have a `purchase()` method. Instead:
 
-Open Android Chrome DevTools → Console:
-```javascript
-console.log(typeof window.getDigitalGoodsService);
-// Result in browser: undefined (expected)
-// Result in PWABuilder app: function (good)
-// If undefined in app, PWABuilder wrapper isn't configured correctly
+```
+1. getDigitalGoodsService() → Get the service
+2. service.getDetails(['product_id']) → Get product info
+3. new PaymentRequest(...) → Create payment request
+4. paymentRequest.show() → Show Google Play payment UI
+5. service.acknowledge(token, 'onetime') → Acknowledge purchase
+6. paymentResponse.complete('success') → Complete transaction
 ```
 
-### **Test 2: Check Product ID Exists**
+This is now correctly implemented in your `app.js`.
+
+---
+
+## 📋 **Setup Checklist**
+
+### 1. Google Play Console Setup
+
+- [ ] Register Google Play Developer account ($25 one-time fee)
+- [ ] Create app in Google Play Console
+- [ ] Go to **Monetization > Products > In-app products**
+- [ ] Create product with **exact ID**: `premium_unlock`
+- [ ] Set price: $4.99 USD
+- [ ] Set status: **Active**
+- [ ] Save and publish changes
+
+### 2. PWABuilder Configuration
+
+When generating Android APK from PWABuilder:
+
+- [ ] Package ID: `io.github.evansmunsha.twa` (or your package)
+- [ ] Enable **Digital Goods API** support
+- [ ] Enable **Google Play Billing**
+- [ ] Generate signed APK/AAB
+
+### 3. Testing Track Setup
+
+- [ ] Upload APK to **Internal Testing** or **Closed Testing (Alpha)** track
+- [ ] Add your email as a tester
+- [ ] Accept the tester invitation link
+- [ ] Install app from Play Store (not side-loaded!)
+
+---
+
+## 🧪 **Testing the Payment**
+
+### Step 1: Run Diagnostics
+
+After installing from Play Store, open the app and run this in Chrome DevTools (remote debugging):
 
 ```javascript
-const service = await window.getDigitalGoodsService();
-const details = await service.getDetails(["premium_unlock"]);
-console.log("Found products:", details);
-// Should show 1 product with price $4.99
-// If empty, product doesn't exist or ID doesn't match
+await invoiceMakerDebug.fullDiagnostic();
 ```
 
-### **Test 3: Simulate a Purchase (Dev Mode)**
+Expected output for working setup:
+```
+=== BILLING API CHECK ===
+1. Digital Goods API: ✅ Available
+2. Payment Request API: ✅ Available
+3. Digital Goods Service: ✅ Connected
+4. Product lookup result: [{ itemId: 'premium_unlock', ... }]
+   ✅ Product found!
+   - Item ID: premium_unlock
+   - Title: Premium Unlock
+   - Price: 4.99 USD
+5. Can make payment: ✅ YES
 
-In `js/app.js`, add this temporary code after line 20:
+🎉 READY TO ACCEPT PAYMENTS!
+```
+
+### Step 2: Test Purchase Flow
+
+1. Tap "Upgrade to Premium" in the app
+2. Google Play payment sheet should appear
+3. Complete payment with test card or real payment
+4. App should show "Success 🎉" toast
+5. Ads should disappear, premium badge should appear
+
+---
+
+## 🐛 **Troubleshooting**
+
+### Issue: "Digital Goods API not available"
+
+**Cause:** Not running in TWA environment
+
+**Solutions:**
+- Make sure app is installed from Google Play Store (not side-loaded)
+- Check you're running the PWABuilder-generated app, not Chrome
+- Verify PWABuilder was configured with Digital Goods enabled
+
+### Issue: "Product 'premium_unlock' not found"
+
+**Cause:** Product ID mismatch or product not active
+
+**Solutions:**
+1. In Google Play Console, verify product ID is exactly `premium_unlock` (case-sensitive!)
+2. Check product status is "Active"
+3. Wait 24 hours after creating product (propagation delay)
+4. Make sure app version in Play Store matches the one with billing
+
+### Issue: "Google Play payment is not available on this device"
+
+**Cause:** Payment Request API can't connect to Google Play
+
+**Solutions:**
+- Update Google Play Services on device
+- Make sure Google account has valid payment method
+- Try different Google account
+- Clear Google Play Store cache
+
+### Issue: "Purchase was cancelled"
+
+**Cause:** User cancelled or payment failed
+
+**Solutions:**
+- This is normal if user taps "back" or cancels
+- Check if payment method is valid
+- For testing, use Google's test card numbers
+
+### Issue: Payment succeeds but premium doesn't activate
+
+**Cause:** Acknowledge or complete step failed
+
+**Solutions:**
+- Check console logs for errors after payment
+- Verify `activatePremium()` is being called
+- Check localStorage for `premiumUser` key
+
+---
+
+## 🔍 **Debug Commands**
+
+Run these in DevTools console:
 
 ```javascript
-// TEMPORARY: Dev mode for testing
-window.simulatePurchase = async () => {
-  console.log("Simulating purchase...");
-  // Manually trigger purchase listener
-  window.postMessage({
-    type: 'PURCHASE_COMPLETE',
-    productId: 'premium_unlock'
-  }, '*');
-  
-  // Also set localStorage directly
-  localStorage.setItem('premiumUser', 'true');
-  isPremiumUser = true;
-  
-  // Update UI
-  hideAds();
-  updateUIForPremiumStatus();
-  showToast('Test', 'Premium simulated', 'success');
-};
+// Full diagnostic
+await invoiceMakerDebug.fullDiagnostic();
 
-// Now in console: await simulatePurchase()
-```
+// Check billing API only
+await invoiceMakerDebug.checkBillingAPI();
 
-Then in DevTools console:
-```javascript
-await simulatePurchase();
-// Should show success toast and disable ads
+// Check premium status
+invoiceMakerDebug.checkPremiumStatus();
+
+// Simulate premium (for testing UI only)
+invoiceMakerDebug.simulatePurchase();
+
+// Reset premium status (for re-testing)
+localStorage.removeItem('premiumUser');
+location.reload();
 ```
 
 ---
 
-## ✅ **Checklist Before Deployment**
+## 📱 **Testing on Different Tracks**
 
-- [ ] Product ID in Google Play Console: `premium_unlock`
-- [ ] Same product ID in `js/app.js` line ~3020
-- [ ] Product status: **Active**
-- [ ] PWABuilder Android APK generated with Digital Goods enabled
-- [ ] APK uploaded to Play Store internal testing track
-- [ ] Tested on real Android device (not emulator)
-- [ ] Device has Google Play Services updated
-- [ ] Test user account added in Play Console
-- [ ] Signed into Play Store with test account on device
-- [ ] Payment method added to test account (or use test card)
+### Internal Testing (Recommended for Development)
+- Fastest to set up (no review needed)
+- Up to 100 testers
+- Real payments OR test cards
+- App not visible in Play Store search
 
----
+### Closed Testing (Alpha/Beta)
+- Good for wider testing
+- Can use license testers for free test purchases
+- Requires tester sign-up
 
-## 🔗 **Common Issues & Fixes**
+### Open Testing
+- Anyone can join
+- Good for final testing before production
 
-### Issue: "Google Play Billing not available"
-**Cause:** Running in browser or side-loaded APK  
-**Fix:** Install from Play Store only
-
-### Issue: "Premium product not found on Google Play"
-**Cause:** Product ID mismatch  
-**Fix:** Check spelling in Play Console and `js/app.js` - must be identical
-
-### Issue: User sees payment UI but nothing happens after
-**Cause:** Product might not be fully available yet (can take 24 hours after first upload)  
-**Fix:** Wait, then test again
-
-### Issue: Payment works but app doesn't recognize as premium
-**Cause:** `checkGooglePlayPremiumStatus()` not being called after purchase  
-**Fix:** Make sure `activatePremium()` is called after purchase confirmation
+### Production
+- Live to all users
+- Real payments only
 
 ---
 
-## 📞 **Need Help?**
+## 💳 **Test Payment Methods**
 
-If payment still isn't working after following this:
+### Option 1: License Testers (Free)
+1. In Play Console → Setup → License testing
+2. Add tester email addresses
+3. These accounts get free "purchases" that don't charge
 
-1. **Check your Play Console product ID** - Screenshot it
-2. **Verify product ID in code** - Search for `"premium_unlock"` in `js/app.js`
-3. **Check app is from Play Store** - Settings → Apps → find "Invoice Maker" → shows "Google Play"
-4. **Check device has Google Play Services** - Settings → Apps → search "Google Play Services"
-5. **Try with different Google account** - Sometimes test accounts have issues
+### Option 2: Test Cards
+Google provides test card numbers for testing:
+- Card: `4111 1111 1111 1111`
+- Expiry: Any future date
+- CVC: Any 3 digits
 
----
-
-## 🚀 **Final Steps to Production**
-
-Once testing works:
-1. Increment app version code
-2. Upload signed APK to production track
-3. Submit for review
-4. Once approved, real users can purchase
-5. Revenue appears in Play Console → Payments profile
+### Option 3: Real Payment
+- Use real payment method
+- You'll be charged (can refund later)
+- Most realistic test
 
 ---
 
-**Status:** Ready for Play Store testing  
-**Last Updated:** January 2, 2026
+## ✅ **Production Deployment Checklist**
+
+Before going live:
+
+- [ ] All tests pass on internal/closed testing
+- [ ] Premium features unlock correctly after purchase
+- [ ] Ads disappear after purchase
+- [ ] PDF watermarks removed after purchase
+- [ ] Purchase persists after app restart
+- [ ] Purchase restores on fresh install (same Google account)
+- [ ] Error messages are user-friendly
+- [ ] Increment version code for production release
+- [ ] Update release notes
+- [ ] Submit for production review
+
+---
+
+## 📊 **Revenue Information**
+
+- Google takes 15% for first $1M/year, 30% after
+- Payouts are monthly to your bank account
+- Set up payments profile in Play Console
+- Tax handling varies by country
+
+---
+
+## 📞 **Support Resources**
+
+- [Digital Goods API Documentation](https://developer.chrome.com/docs/android/trusted-web-activity/receive-payments-play-billing/)
+- [Payment Request API](https://developer.mozilla.org/en-US/docs/Web/API/Payment_Request_API)
+- [Google Play Billing](https://developer.android.com/google/play/billing)
+- [PWABuilder Documentation](https://docs.pwabuilder.com/)
+
+---
+
+## 🎉 **Success Indicators**
+
+When everything is working:
+
+1. ✅ `invoiceMakerDebug.fullDiagnostic()` shows all green checkmarks
+2. ✅ Tapping "Purchase" shows Google Play payment sheet
+3. ✅ After payment, toast shows "Success 🎉"
+4. ✅ Premium badge appears in header
+5. ✅ Ads container disappears
+6. ✅ Usage limits section hides
+7. ✅ PDFs generate without watermark
+8. ✅ `localStorage.getItem('premiumUser')` returns `"true"`
+
+---
+
+**Last Updated:** January 2025
+**Status:** Payment Request API implementation complete

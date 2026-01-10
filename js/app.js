@@ -6,10 +6,15 @@
 /* =========================
    1. GLOBAL STATE & CONSTANTS
 ========================= */
-let items = [], editItems = [], invoiceCounter = 0;
-let autoSaveInterval = null, hasUnsavedChanges = false;
-let selectedInvoices = new Set(), isPremiumUser = false;
-let currentEditingInvoice = null, currentShareInvoice = null;
+let items = [],
+  editItems = [],
+  invoiceCounter = 0;
+let autoSaveInterval = null,
+  hasUnsavedChanges = false;
+let selectedInvoices = new Set(),
+  isPremiumUser = false;
+let currentEditingInvoice = null,
+  currentShareInvoice = null;
 let digitalGoodsService = null;
 let itemsDiv, totalSpan, invoiceList;
 
@@ -26,17 +31,17 @@ window.addEventListener("load", async () => {
   await openDB();
   await initializeInvoiceCounter();
   await initDigitalGoods();
-  
+
   setSmartDefaults();
   loadHistory();
   addItemRow();
-  
+
   initializeCurrency();
   initializeAutoSave();
   initializeKeyboardShortcuts();
   initializeAccessibility();
   initializeMonetization();
-  
+
   setupFormValidation();
   setupSearchAndFilter();
   setupShareFunctionality();
@@ -45,15 +50,15 @@ window.addEventListener("load", async () => {
   setupModalHandlers();
   setupUsageStatsHandlers();
   initializeFooterHandlers();
-  
+
   checkForSavedDraft();
   handleSharedInvoiceFromURL();
-  
+
   if (location.search.includes("dev_premium=1")) {
     localStorage.setItem("premiumUser", "true");
     isPremiumUser = true;
   }
-  
+
   updateUsageStatsDisplay();
   showWelcomeMessage();
 });
@@ -66,7 +71,12 @@ async function initializeInvoiceCounter() {
 function showWelcomeMessage() {
   if (!localStorage.getItem("hasSeenWelcome")) {
     setTimeout(() => {
-      showToast("Welcome!", "Fill in your details and add items to create your first invoice.", "success", 6000);
+      showToast(
+        "Welcome!",
+        "Fill in your details and add items to create your first invoice.",
+        "success",
+        6000,
+      );
       localStorage.setItem("hasSeenWelcome", "true");
     }, 1000);
   }
@@ -75,13 +85,22 @@ function showWelcomeMessage() {
 /* =========================
    3. GOOGLE PLAY BILLING
 ========================= */
+const GOOGLE_PLAY_BILLING_URL = "https://play.google.com/billing";
+const PREMIUM_PRODUCT_ID = "premium_unlock";
+
 async function initDigitalGoods() {
-  if (!window.getDigitalGoodsService) return;
+  if (!window.getDigitalGoodsService) {
+    console.log("Digital Goods API not available (not in TWA)");
+    return;
+  }
   try {
-    digitalGoodsService = await window.getDigitalGoodsService("https://play.google.com/billing");
+    digitalGoodsService = await window.getDigitalGoodsService(
+      GOOGLE_PLAY_BILLING_URL,
+    );
+    console.log("✅ Digital Goods Service initialized");
     await restorePurchases();
   } catch (err) {
-    console.error("Digital Goods init failed", err);
+    console.error("Digital Goods init failed:", err);
   }
 }
 
@@ -89,46 +108,146 @@ async function restorePurchases() {
   if (!digitalGoodsService) return;
   try {
     const purchases = await digitalGoodsService.listPurchases();
-    purchases.forEach(p => {
-      if (p.itemId === "premium_unlock") activatePremium();
-    });
+    console.log("Checking existing purchases:", purchases);
+    for (const purchase of purchases) {
+      if (purchase.itemId === PREMIUM_PRODUCT_ID) {
+        console.log("✅ Found existing premium purchase");
+        activatePremium();
+        return;
+      }
+    }
   } catch (err) {
-    console.error("Restore purchases failed", err);
+    console.error("Restore purchases failed:", err);
   }
 }
 
 async function purchasePremiumWithGooglePlay() {
+  const btn = document.getElementById("purchasePremium");
+
   try {
+    // Check if Digital Goods API is available
     if (typeof window.getDigitalGoodsService !== "function") {
-      alert("Purchases only available in Android app from Google Play.");
+      showToast(
+        "Not Available",
+        "Purchases only available in the Android app from Google Play.",
+        "error",
+      );
       return;
     }
 
-    const btn = document.getElementById("purchasePremium");
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = "🔄 Processing...";
     }
 
-    const service = await window.getDigitalGoodsService("play.google.com/billing");
-    if (!service) throw new Error("Failed to get Digital Goods Service");
-
-    const details = await service.getDetails(["premium_unlock"]);
-    if (!details?.length) throw new Error("Product 'premium_unlock' not found");
-
-    const purchase = await service.purchase({ itemId: "premium_unlock" });
-
-    if (purchase?.purchaseToken) {
-      await service.acknowledge({ purchaseToken: purchase.purchaseToken, purchaseType: "onetime" });
-      activatePremium();
-      showToast("Success 🎉", "Premium unlocked permanently!", "success");
-      closePremiumModal();
+    // Get Digital Goods Service
+    const service = await window.getDigitalGoodsService(
+      GOOGLE_PLAY_BILLING_URL,
+    );
+    if (!service) {
+      throw new Error("Failed to connect to Google Play Billing");
     }
+    console.log("✅ Got Digital Goods Service");
+
+    // Get product details to verify product exists
+    const skuDetails = await service.getDetails([PREMIUM_PRODUCT_ID]);
+    console.log("Product details:", skuDetails);
+
+    if (!skuDetails || skuDetails.length === 0) {
+      throw new Error(
+        `Product '${PREMIUM_PRODUCT_ID}' not found in Google Play Console. Make sure the product is active.`,
+      );
+    }
+
+    const product = skuDetails[0];
+    console.log(
+      `✅ Product found: ${product.title} - ${product.price.value} ${product.price.currency}`,
+    );
+
+    // Use Payment Request API to initiate purchase
+    const paymentMethods = [
+      {
+        supportedMethods: GOOGLE_PLAY_BILLING_URL,
+        data: {
+          sku: PREMIUM_PRODUCT_ID,
+        },
+      },
+    ];
+
+    const paymentDetails = {
+      total: {
+        label: product.title || "Premium Unlock",
+        amount: {
+          currency: product.price?.currency || "USD",
+          value: product.price?.value || "4.99",
+        },
+      },
+    };
+
+    console.log("Creating Payment Request...");
+    const paymentRequest = new PaymentRequest(paymentMethods, paymentDetails);
+
+    // Check if payment method is available
+    const canMakePayment = await paymentRequest.canMakePayment();
+    if (!canMakePayment) {
+      throw new Error("Google Play payment is not available on this device");
+    }
+    console.log("✅ Payment method available");
+
+    // Show payment UI
+    console.log("Showing payment UI...");
+    const paymentResponse = await paymentRequest.show();
+    console.log("Payment response received:", paymentResponse);
+
+    // Get purchase token from response
+    const { purchaseToken } = paymentResponse.details;
+
+    if (!purchaseToken) {
+      throw new Error("No purchase token received");
+    }
+    console.log("✅ Purchase token received");
+
+    // Acknowledge the purchase (required for one-time purchases)
+    try {
+      await service.acknowledge(purchaseToken, "onetime");
+      console.log("✅ Purchase acknowledged");
+    } catch (ackErr) {
+      console.warn(
+        "Acknowledge warning (may already be acknowledged):",
+        ackErr,
+      );
+    }
+
+    // Complete the payment
+    await paymentResponse.complete("success");
+    console.log("✅ Payment completed");
+
+    // Activate premium features
+    activatePremium();
+    showToast(
+      "Success 🎉",
+      "Premium unlocked permanently! Thank you for your purchase.",
+      "success",
+      5000,
+    );
+    closePremiumModal();
   } catch (err) {
     console.error("Purchase failed:", err);
-    showToast("Payment Failed", err.name === "NotAllowedError" ? "Purchase cancelled." : "Purchase failed.", "error");
+
+    let errorMessage = "Purchase failed. Please try again.";
+
+    if (err.name === "AbortError" || err.name === "NotAllowedError") {
+      errorMessage = "Purchase was cancelled.";
+    } else if (err.message.includes("not found")) {
+      errorMessage = "Product not available. Please try again later.";
+    } else if (err.message.includes("not available")) {
+      errorMessage = err.message;
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+
+    showToast("Payment Failed", errorMessage, "error", 5000);
   } finally {
-    const btn = document.getElementById("purchasePremium");
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = "🚀 Purchase via Google Play – $4.99";
@@ -139,14 +258,23 @@ async function purchasePremiumWithGooglePlay() {
 window.addEventListener("message", (e) => {
   try {
     const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-    if (data?.type === "PURCHASE_COMPLETE" && (data.productId === "premium_unlock" || data.productId === "io.github.evansmunsha.twa.premium")) {
+    if (
+      data?.type === "PURCHASE_COMPLETE" &&
+      (data.productId === "premium_unlock" ||
+        data.productId === "io.github.evansmunsha.twa.premium")
+    ) {
       localStorage.setItem("premiumUser", "true");
       localStorage.setItem("purchaseMethod", "google_play");
       localStorage.setItem("purchaseDate", new Date().toISOString());
       isPremiumUser = true;
       hideAds();
       updateUIForPremiumStatus();
-      showToast("🎉 Premium Unlocked!", "Enjoy unlimited invoices and watermark-free PDFs.", "success", 5000);
+      showToast(
+        "🎉 Premium Unlocked!",
+        "Enjoy unlimited invoices and watermark-free PDFs.",
+        "success",
+        5000,
+      );
     }
   } catch (err) {}
 });
@@ -189,8 +317,12 @@ function generateInvoiceNumber() {
 }
 
 function setSmartDefaults() {
-  document.getElementById("invoiceDate").value = new Date().toISOString().split("T")[0];
-  document.getElementById("invoiceTime").value = new Date().toTimeString().slice(0, 5);
+  document.getElementById("invoiceDate").value = new Date()
+    .toISOString()
+    .split("T")[0];
+  document.getElementById("invoiceTime").value = new Date()
+    .toTimeString()
+    .slice(0, 5);
   document.getElementById("invoiceNumber").value = generateInvoiceNumber();
   const saved = localStorage.getItem("businessName");
   if (saved) document.getElementById("businessName").value = saved;
@@ -235,7 +367,7 @@ function hideLoading() {
 function setupFormValidation() {
   const fields = {
     businessName: { required: true, minLength: 2 },
-    invoiceDate: { required: true }
+    invoiceDate: { required: true },
   };
 
   Object.entries(fields).forEach(([id, rules]) => {
@@ -256,7 +388,8 @@ function setupFormValidation() {
 function validateField(fieldId, value, rules = {}) {
   const field = document.getElementById(fieldId);
   const errorElement = document.getElementById(fieldId + "Error");
-  let isValid = true, errorMessage = "";
+  let isValid = true,
+    errorMessage = "";
 
   if (rules.required && (!value || value.trim() === "")) {
     isValid = false;
@@ -279,8 +412,15 @@ function validateField(fieldId, value, rules = {}) {
 }
 
 function validateForm() {
-  let isValid = validateField("businessName", document.getElementById("businessName").value, { required: true, minLength: 2 });
-  isValid = validateField("invoiceDate", document.getElementById("invoiceDate").value, { required: true }) && isValid;
+  let isValid = validateField(
+    "businessName",
+    document.getElementById("businessName").value,
+    { required: true, minLength: 2 },
+  );
+  isValid =
+    validateField("invoiceDate", document.getElementById("invoiceDate").value, {
+      required: true,
+    }) && isValid;
 
   if (!items.length) {
     showToast("Validation Error", "Add at least one item", "error");
@@ -293,11 +433,19 @@ function validateForm() {
       isValid = false;
     }
     if (item.qty <= 0) {
-      showToast("Validation Error", `Item ${i + 1} quantity must be > 0`, "error");
+      showToast(
+        "Validation Error",
+        `Item ${i + 1} quantity must be > 0`,
+        "error",
+      );
       isValid = false;
     }
     if (item.price < 0) {
-      showToast("Validation Error", `Item ${i + 1} price cannot be negative`, "error");
+      showToast(
+        "Validation Error",
+        `Item ${i + 1} price cannot be negative`,
+        "error",
+      );
       isValid = false;
     }
   });
@@ -315,21 +463,49 @@ function validateItemInput(input, value, type) {
 
   const validations = {
     name: [
-      { check: v => v.length < 2, class: "input-warning", msg: "Name should be more descriptive" },
-      { check: v => v.length > 50, class: "input-warning", msg: "Name is too long" },
-      { check: () => false, class: "input-valid", msg: "" }
+      {
+        check: (v) => v.length < 2,
+        class: "input-warning",
+        msg: "Name should be more descriptive",
+      },
+      {
+        check: (v) => v.length > 50,
+        class: "input-warning",
+        msg: "Name is too long",
+      },
+      { check: () => false, class: "input-valid", msg: "" },
     ],
     quantity: [
-      { check: v => v <= 0, class: "input-error", msg: "Quantity must be > 0" },
-      { check: v => v > 1000, class: "input-warning", msg: "Large quantity - verify" },
-      { check: () => false, class: "input-valid", msg: "" }
+      {
+        check: (v) => v <= 0,
+        class: "input-error",
+        msg: "Quantity must be > 0",
+      },
+      {
+        check: (v) => v > 1000,
+        class: "input-warning",
+        msg: "Large quantity - verify",
+      },
+      { check: () => false, class: "input-valid", msg: "" },
     ],
     price: [
-      { check: v => v < 0, class: "input-error", msg: "Price cannot be negative" },
-      { check: v => v === 0, class: "input-warning", msg: "Free item - correct?" },
-      { check: v => v > 10000, class: "input-warning", msg: "High price - verify" },
-      { check: () => false, class: "input-valid", msg: "" }
-    ]
+      {
+        check: (v) => v < 0,
+        class: "input-error",
+        msg: "Price cannot be negative",
+      },
+      {
+        check: (v) => v === 0,
+        class: "input-warning",
+        msg: "Free item - correct?",
+      },
+      {
+        check: (v) => v > 10000,
+        class: "input-warning",
+        msg: "High price - verify",
+      },
+      { check: () => false, class: "input-valid", msg: "" },
+    ],
   };
 
   const val = parseFloat(value);
@@ -363,10 +539,6 @@ function clearItemHelperText(input) {
   document.getElementById(id)?.remove();
 }
 
-
-
-
-
 /*********************************************************
  * OFFLINE INVOICE MAKER – REFACTORED PART 2
  * Sections 8-15: Items, Calculations, Saving, PDF
@@ -376,21 +548,26 @@ function clearItemHelperText(input) {
    8. ITEMS MANAGEMENT
 ========================= */
 function addItemRow(data = {}) {
-  const item = { name: data.name || "", qty: data.qty || 1, price: data.price || 0 };
+  const item = {
+    name: data.name || "",
+    qty: data.qty || 1,
+    price: data.price || 0,
+  };
   items.push(item);
   const index = items.length - 1;
 
   const row = document.createElement("div");
   row.className = "item-row";
   row.innerHTML = `
-    <input placeholder="Item name (e.g. Website Design)" value="${item.name}" 
+    <input placeholder="Item name (e.g. Website Design)" value="${item.name}"
            aria-label="Item name or service description">
     <input type="number" min="1" value="${item.qty}" aria-label="Quantity" placeholder="Qty">
     <input type="number" min="0" step="0.01" value="${item.price}" aria-label="Unit price" placeholder="0.00">
     <button class="danger" aria-label="Remove this item">✕</button>
   `;
 
-  const [nameInput, qtyInput, priceInput, deleteBtn] = row.querySelectorAll("input, button");
+  const [nameInput, qtyInput, priceInput, deleteBtn] =
+    row.querySelectorAll("input, button");
 
   nameInput.oninput = (e) => {
     items[index].name = e.target.value;
@@ -438,8 +615,14 @@ function calculateTotal() {
 function calculateEditTotal() {
   const currency = getCurrency();
   const total = editItems.reduce((sum, i) => sum + i.qty * i.price, 0);
-  document.getElementById("editTotal").textContent = `${currency} ${total.toFixed(2)}`;
-  updateCalculationBreakdown(currency, total, editItems, "edit-calculation-breakdown");
+  document.getElementById("editTotal").textContent =
+    `${currency} ${total.toFixed(2)}`;
+  updateCalculationBreakdown(
+    currency,
+    total,
+    editItems,
+    "edit-calculation-breakdown",
+  );
 }
 
 function updateCalculationBreakdown(currency, total, itemsList, elementId) {
@@ -449,8 +632,8 @@ function updateCalculationBreakdown(currency, total, itemsList, elementId) {
     element = document.createElement("div");
     element.id = elementId;
     element.className = "calculation-breakdown";
-    const parent = elementId.includes("edit") 
-      ? document.querySelector("#editTotal")?.parentNode 
+    const parent = elementId.includes("edit")
+      ? document.querySelector("#editTotal")?.parentNode
       : document.querySelector(".total");
     if (parent) parent.appendChild(element);
   }
@@ -464,7 +647,8 @@ function updateCalculationBreakdown(currency, total, itemsList, elementId) {
   itemsList.forEach((item) => {
     if (item.name && item.qty > 0) {
       const itemTotal = item.qty * item.price;
-      const name = item.name.length > 20 ? item.name.substring(0, 20) + "..." : item.name;
+      const name =
+        item.name.length > 20 ? item.name.substring(0, 20) + "..." : item.name;
       html += `<div class="breakdown-item">${name}: ${item.qty} × ${currency} ${item.price.toFixed(2)} = ${currency} ${itemTotal.toFixed(2)}</div>`;
     }
   });
@@ -511,7 +695,11 @@ document.getElementById("saveInvoice").onclick = async () => {
       updateUsageStatsDisplay();
     }
 
-    showToast("Success!", `Invoice ${invoice.invoiceNumber} saved successfully.`, "success");
+    showToast(
+      "Success!",
+      `Invoice ${invoice.invoiceNumber} saved successfully.`,
+      "success",
+    );
     clearDraft();
     resetForm();
   } catch (error) {
@@ -545,7 +733,7 @@ function renderInvoiceList(invoices) {
     const li = document.createElement("li");
     li.innerHTML = `
       <div class="invoice-select">
-        <input type="checkbox" class="invoice-checkbox" data-invoice-id="${inv.id}" 
+        <input type="checkbox" class="invoice-checkbox" data-invoice-id="${inv.id}"
                aria-label="Select invoice ${inv.invoiceNumber || inv.id}">
       </div>
       <div class="invoice-content">
@@ -606,8 +794,12 @@ function resetForm() {
   totalSpan.textContent = "0";
   document.getElementById("clientName").value = "";
   setSmartDefaults();
-  document.querySelectorAll(".form-field").forEach(f => f.classList.remove("error", "success"));
-  document.querySelectorAll(".error-message").forEach(e => e.textContent = "");
+  document
+    .querySelectorAll(".form-field")
+    .forEach((f) => f.classList.remove("error", "success"));
+  document
+    .querySelectorAll(".error-message")
+    .forEach((e) => (e.textContent = ""));
   showToast("Form Reset", "Ready to create a new invoice!", "info", 2000);
   clearDraft();
 }
@@ -617,9 +809,14 @@ function duplicateInvoice(invoice) {
   document.getElementById("clientName").value = invoice.clientName || "";
   items = [];
   itemsDiv.innerHTML = "";
-  invoice.items.forEach(item => addItemRow(item));
+  invoice.items.forEach((item) => addItemRow(item));
   setSmartDefaults();
-  showToast("Duplicated", "Invoice data loaded. Modify and save as new.", "info", 5000);
+  showToast(
+    "Duplicated",
+    "Invoice data loaded. Modify and save as new.",
+    "info",
+    5000,
+  );
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -639,7 +836,7 @@ document.getElementById("generatePDF").onclick = async () => {
     btn.innerHTML = "📄 Generating...";
     btn.disabled = true;
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const invoiceData = {
       invoiceNumber: document.getElementById("invoiceNumber").value,
@@ -659,7 +856,11 @@ document.getElementById("generatePDF").onclick = async () => {
       updateUsageStatsDisplay();
     }
 
-    showToast("PDF Generated!", "Your invoice PDF has been downloaded.", "success");
+    showToast(
+      "PDF Generated!",
+      "Your invoice PDF has been downloaded.",
+      "success",
+    );
   } catch (error) {
     showToast("Error", "Failed to generate PDF.", "error");
   } finally {
@@ -717,7 +918,9 @@ async function generatePDFBlob(invoice) {
       doc.setFont(undefined, "bold");
       doc.text("Date:", 20, y);
       doc.setFont(undefined, "normal");
-      const dateTime = new Date(invoice.date).toLocaleDateString() + (invoice.time ? ` at ${invoice.time}` : "");
+      const dateTime =
+        new Date(invoice.date).toLocaleDateString() +
+        (invoice.time ? ` at ${invoice.time}` : "");
       doc.text(dateTime, 60, y);
       y += 20;
 
@@ -730,9 +933,12 @@ async function generatePDFBlob(invoice) {
       y += 10;
       doc.setFont(undefined, "normal");
 
-      invoice.items.forEach(item => {
+      invoice.items.forEach((item) => {
         const itemTotal = item.qty * item.price;
-        const name = item.name.length > 25 ? item.name.substring(0, 25) + "..." : item.name;
+        const name =
+          item.name.length > 25
+            ? item.name.substring(0, 25) + "..."
+            : item.name;
         doc.text(name, 20, y);
         doc.text(item.qty.toString(), 120, y);
         doc.text(item.price.toFixed(2), 140, y);
@@ -760,7 +966,13 @@ async function generatePDFBlob(invoice) {
 function initializeAutoSave() {
   autoSaveInterval = setInterval(saveDraft, 30000);
 
-  ["businessName", "clientName", "invoiceDate", "invoiceTime", "currency"].forEach(id => {
+  [
+    "businessName",
+    "clientName",
+    "invoiceDate",
+    "invoiceTime",
+    "currency",
+  ].forEach((id) => {
     const field = document.getElementById(id);
     if (field) {
       field.addEventListener("input", () => {
@@ -814,7 +1026,11 @@ function checkForSavedDraft() {
     setTimeout(() => {
       if (confirm(`Found unsaved work from ${date}. Recover it?`)) {
         recoverDraft(draft);
-        showToast("Recovered", "Your unsaved work has been restored", "success");
+        showToast(
+          "Recovered",
+          "Your unsaved work has been restored",
+          "success",
+        );
       } else {
         clearDraft();
       }
@@ -834,7 +1050,7 @@ function recoverDraft(draft) {
   items = [];
   itemsDiv.innerHTML = "";
   if (draft.items?.length) {
-    draft.items.forEach(item => addItemRow(item));
+    draft.items.forEach((item) => addItemRow(item));
   } else {
     addItemRow();
   }
@@ -863,37 +1079,33 @@ async function filterInvoices() {
   let invoices = await getInvoices();
 
   if (term) {
-    invoices = invoices.filter(inv =>
-      (inv.clientName || "").toLowerCase().includes(term) ||
-      (inv.businessName || "").toLowerCase().includes(term) ||
-      (inv.invoiceNumber || "").toLowerCase().includes(term)
+    invoices = invoices.filter(
+      (inv) =>
+        (inv.clientName || "").toLowerCase().includes(term) ||
+        (inv.businessName || "").toLowerCase().includes(term) ||
+        (inv.invoiceNumber || "").toLowerCase().includes(term),
     );
   }
 
   invoices.sort((a, b) => {
     switch (sortBy) {
-      case "date-asc": return new Date(a.date) - new Date(b.date);
-      case "date-desc": return new Date(b.date) - new Date(a.date);
-      case "client-asc": return (a.clientName || "").localeCompare(b.clientName || "");
+      case "date-asc":
+        return new Date(a.date) - new Date(b.date);
+      case "date-desc":
+        return new Date(b.date) - new Date(a.date);
+      case "client-asc":
+        return (a.clientName || "").localeCompare(b.clientName || "");
       case "total-desc":
         const aTotal = parseFloat((a.total || "0").replace(/[^\d.-]/g, ""));
         const bTotal = parseFloat((b.total || "0").replace(/[^\d.-]/g, ""));
         return bTotal - aTotal;
-      default: return new Date(b.date) - new Date(a.date);
+      default:
+        return new Date(b.date) - new Date(a.date);
     }
   });
 
   renderInvoiceList(invoices);
 }
-
-
-
-
-
-
-
-
-
 
 /*********************************************************
  * OFFLINE INVOICE MAKER – REFACTORED PART 3 (FINAL)
@@ -935,7 +1147,8 @@ function setupModalHandlers() {
     }
   };
 
-  document.getElementById("duplicateInvoice").onclick = () => duplicateInvoiceFromModal();
+  document.getElementById("duplicateInvoice").onclick = () =>
+    duplicateInvoiceFromModal();
   document.getElementById("cancelEdit").onclick = closeEditModal;
   document.getElementById("closeModal").onclick = closeEditModal;
 }
@@ -944,8 +1157,10 @@ function openEditModal(invoice) {
   currentEditingInvoice = invoice;
   editItems = [...invoice.items];
 
-  document.getElementById("editInvoiceNumber").value = invoice.invoiceNumber || "INV-" + invoice.id;
-  document.getElementById("editBusinessName").value = invoice.businessName || "";
+  document.getElementById("editInvoiceNumber").value =
+    invoice.invoiceNumber || "INV-" + invoice.id;
+  document.getElementById("editBusinessName").value =
+    invoice.businessName || "";
   document.getElementById("editClientName").value = invoice.clientName || "";
   document.getElementById("editDate").value = invoice.date || "";
   document.getElementById("editTime").value = invoice.time || "";
@@ -968,7 +1183,8 @@ function renderEditItems() {
       <input type="number" value="${item.price}" min="0" step="0.01" placeholder="0.00" aria-label="Unit price">
       <button type="button" class="danger" aria-label="Remove">✕</button>`;
 
-    const [nameInput, qtyInput, priceInput, deleteBtn] = row.querySelectorAll("input, button");
+    const [nameInput, qtyInput, priceInput, deleteBtn] =
+      row.querySelectorAll("input, button");
 
     nameInput.oninput = (e) => {
       editItems[index].name = e.target.value;
@@ -1031,16 +1247,24 @@ function setupShareFunctionality() {
     });
   });
 
-  document.getElementById("closeShareModal").addEventListener("click", closeShareModal);
-  document.getElementById("closeShareModalBtn").addEventListener("click", closeShareModal);
-  
+  document
+    .getElementById("closeShareModal")
+    .addEventListener("click", closeShareModal);
+  document
+    .getElementById("closeShareModalBtn")
+    .addEventListener("click", closeShareModal);
+
   document.getElementById("shareNative").addEventListener("click", shareNative);
   document.getElementById("sharePDF").addEventListener("click", sharePDF);
   document.getElementById("shareEmail").addEventListener("click", shareEmail);
-  document.getElementById("shareWhatsApp").addEventListener("click", shareWhatsApp);
+  document
+    .getElementById("shareWhatsApp")
+    .addEventListener("click", shareWhatsApp);
   document.getElementById("shareData").addEventListener("click", shareData);
   document.getElementById("copyLink").addEventListener("click", copyShareLink);
-  document.getElementById("sendWhatsAppDirect").addEventListener("click", sendWhatsAppDirect);
+  document
+    .getElementById("sendWhatsAppDirect")
+    .addEventListener("click", sendWhatsAppDirect);
 }
 
 function openShareModal(invoice) {
@@ -1065,13 +1289,21 @@ function closeShareModal() {
 
 async function shareNative() {
   if (!navigator.share) {
-    showToast("Not Supported", "Native sharing not supported on this device", "warning");
+    showToast(
+      "Not Supported",
+      "Native sharing not supported on this device",
+      "warning",
+    );
     return;
   }
 
   try {
     const pdfBlob = await generatePDFBlob(currentShareInvoice);
-    const file = new File([pdfBlob], `${currentShareInvoice.invoiceNumber || "invoice"}.pdf`, { type: "application/pdf" });
+    const file = new File(
+      [pdfBlob],
+      `${currentShareInvoice.invoiceNumber || "invoice"}.pdf`,
+      { type: "application/pdf" },
+    );
 
     await navigator.share({
       title: `Invoice ${currentShareInvoice.invoiceNumber}`,
@@ -1114,19 +1346,31 @@ Date: ${new Date(currentShareInvoice.date).toLocaleDateString()}${currentShareIn
 Total: ${currentShareInvoice.total}
 
 Items:
-${currentShareInvoice.items.map(i => `- ${i.name}: ${i.qty} x ${i.price} = ${(i.qty * i.price).toFixed(2)}`).join("\n")}
+${currentShareInvoice.items.map((i) => `- ${i.name}: ${i.qty} x ${i.price} = ${(i.qty * i.price).toFixed(2)}`).join("\n")}
 
 Best regards`;
 
   window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  showToast("Email Client Opened", "Your email client should open with invoice details", "info");
+  showToast(
+    "Email Client Opened",
+    "Your email client should open with invoice details",
+    "info",
+  );
   closeShareModal();
 }
 
 function shareWhatsApp() {
   const message = formatWhatsAppMessage(currentShareInvoice);
-  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-  showToast("WhatsApp Opened", "WhatsApp opened with invoice details", "success");
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(message)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+  showToast(
+    "WhatsApp Opened",
+    "WhatsApp opened with invoice details",
+    "success",
+  );
   if (!document.getElementById("shareModal").classList.contains("hidden")) {
     closeShareModal();
   }
@@ -1135,7 +1379,11 @@ function shareWhatsApp() {
 function sendWhatsAppDirect() {
   const phone = document.getElementById("whatsappNumber").value.trim();
   if (!phone) {
-    showToast("Phone Number Required", "Please enter a phone number", "warning");
+    showToast(
+      "Phone Number Required",
+      "Please enter a phone number",
+      "warning",
+    );
     return;
   }
 
@@ -1146,8 +1394,16 @@ function sendWhatsAppDirect() {
   }
 
   const message = formatWhatsAppMessage(currentShareInvoice);
-  window.open(`https://wa.me/${clean}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-  showToast("WhatsApp Opened", `Invoice sent to ${phone} via WhatsApp`, "success");
+  window.open(
+    `https://wa.me/${clean}?text=${encodeURIComponent(message)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+  showToast(
+    "WhatsApp Opened",
+    `Invoice sent to ${phone} via WhatsApp`,
+    "success",
+  );
   localStorage.setItem("lastWhatsAppNumber", phone);
   closeShareModal();
 }
@@ -1204,7 +1460,7 @@ Date: ${new Date(currentShareInvoice.date).toLocaleDateString()}${currentShareIn
 Total: ${currentShareInvoice.total}
 
 Items:
-${currentShareInvoice.items.map(i => `- ${i.name}: ${i.qty} x ${i.price} = ${(i.qty * i.price).toFixed(2)}`).join("\n")}`;
+${currentShareInvoice.items.map((i) => `- ${i.name}: ${i.qty} x ${i.price} = ${(i.qty * i.price).toFixed(2)}`).join("\n")}`;
 
   try {
     await navigator.clipboard.writeText(text);
@@ -1272,26 +1528,47 @@ function loadSharedInvoice(inv) {
   items = [];
   itemsDiv.innerHTML = "";
   if (inv.items?.length) {
-    inv.items.forEach(item => addItemRow(item));
+    inv.items.forEach((item) => addItemRow(item));
   } else {
     addItemRow();
   }
 
   calculateTotal();
-  showToast("Shared Invoice Loaded", `Invoice ${inv.invoiceNumber} loaded from shared link`, "info", 5000);
-  setTimeout(() => window.history.replaceState({}, document.title, window.location.pathname), 1000);
+  showToast(
+    "Shared Invoice Loaded",
+    `Invoice ${inv.invoiceNumber} loaded from shared link`,
+    "info",
+    5000,
+  );
+  setTimeout(
+    () =>
+      window.history.replaceState({}, document.title, window.location.pathname),
+    1000,
+  );
 }
 
 /* =========================
    16. BULK ACTIONS
 ========================= */
 function setupBulkActions() {
-  document.getElementById("bulkShare")?.addEventListener("click", handleBulkShare);
-  document.getElementById("bulkWhatsApp")?.addEventListener("click", handleBulkWhatsApp);
-  document.getElementById("bulkDelete")?.addEventListener("click", handleBulkDelete);
-  document.getElementById("clearSelection")?.addEventListener("click", clearSelection);
-  document.getElementById("bulkExportPDF")?.addEventListener("click", handleBulkExportPDF);
-  document.getElementById("expandBulkActions")?.addEventListener("click", toggleBulkActionsExpansion);
+  document
+    .getElementById("bulkShare")
+    ?.addEventListener("click", handleBulkShare);
+  document
+    .getElementById("bulkWhatsApp")
+    ?.addEventListener("click", handleBulkWhatsApp);
+  document
+    .getElementById("bulkDelete")
+    ?.addEventListener("click", handleBulkDelete);
+  document
+    .getElementById("clearSelection")
+    ?.addEventListener("click", clearSelection);
+  document
+    .getElementById("bulkExportPDF")
+    ?.addEventListener("click", handleBulkExportPDF);
+  document
+    .getElementById("expandBulkActions")
+    ?.addEventListener("click", toggleBulkActionsExpansion);
 }
 
 function setupSelectAllFunctionality() {
@@ -1299,7 +1576,7 @@ function setupSelectAllFunctionality() {
   if (!checkbox) return;
 
   checkbox.addEventListener("change", (e) => {
-    document.querySelectorAll(".invoice-checkbox").forEach(cb => {
+    document.querySelectorAll(".invoice-checkbox").forEach((cb) => {
       cb.checked = e.target.checked;
       const id = parseInt(cb.dataset.invoiceId);
       e.target.checked ? selectedInvoices.add(id) : selectedInvoices.delete(id);
@@ -1353,13 +1630,15 @@ function updateSelectAllState() {
 
 async function handleBulkShare() {
   const invoices = await getInvoices();
-  const selected = invoices.filter(inv => selectedInvoices.has(inv.id));
-  selected.length === 1 ? openShareModal(selected[0]) : shareBulkInvoices(selected);
+  const selected = invoices.filter((inv) => selectedInvoices.has(inv.id));
+  selected.length === 1
+    ? openShareModal(selected[0])
+    : shareBulkInvoices(selected);
 }
 
 async function handleBulkWhatsApp() {
   const invoices = await getInvoices();
-  const selected = invoices.filter(inv => selectedInvoices.has(inv.id));
+  const selected = invoices.filter((inv) => selectedInvoices.has(inv.id));
   if (selected.length === 1) {
     currentShareInvoice = selected[0];
     shareWhatsApp();
@@ -1369,7 +1648,10 @@ async function handleBulkWhatsApp() {
 }
 
 async function handleBulkDelete() {
-  if (!confirm(`Delete ${selectedInvoices.size} invoices? This cannot be undone.`)) return;
+  if (
+    !confirm(`Delete ${selectedInvoices.size} invoices? This cannot be undone.`)
+  )
+    return;
 
   try {
     for (const id of selectedInvoices) {
@@ -1377,7 +1659,11 @@ async function handleBulkDelete() {
     }
     clearSelection();
     await loadHistory();
-    showToast("Deleted", `${selectedInvoices.size} invoices deleted`, "success");
+    showToast(
+      "Deleted",
+      `${selectedInvoices.size} invoices deleted`,
+      "success",
+    );
   } catch (error) {
     showToast("Error", "Failed to delete some invoices", "error");
   }
@@ -1385,7 +1671,9 @@ async function handleBulkDelete() {
 
 function clearSelection() {
   selectedInvoices.clear();
-  document.querySelectorAll(".invoice-checkbox").forEach(cb => cb.checked = false);
+  document
+    .querySelectorAll(".invoice-checkbox")
+    .forEach((cb) => (cb.checked = false));
   updateBulkActionsVisibility();
 }
 
@@ -1408,7 +1696,7 @@ function toggleBulkActionsExpansion() {
 
 async function handleBulkExportPDF() {
   const invoices = await getInvoices();
-  const selected = invoices.filter(inv => selectedInvoices.has(inv.id));
+  const selected = invoices.filter((inv) => selectedInvoices.has(inv.id));
   if (!selected.length) return;
 
   try {
@@ -1416,13 +1704,18 @@ async function handleBulkExportPDF() {
 
     for (let i = 0; i < selected.length; i++) {
       const loading = document.getElementById("loading-message");
-      if (loading) loading.textContent = `Generating PDF ${i + 1} of ${selected.length}...`;
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (loading)
+        loading.textContent = `Generating PDF ${i + 1} of ${selected.length}...`;
+      await new Promise((resolve) => setTimeout(resolve, 500));
       exportInvoicePDF(selected[i]);
     }
 
     hideLoading();
-    showToast("PDFs Generated", `${selected.length} PDFs generated and downloaded`, "success");
+    showToast(
+      "PDFs Generated",
+      `${selected.length} PDFs generated and downloaded`,
+      "success",
+    );
     clearSelection();
   } catch (error) {
     hideLoading();
@@ -1442,11 +1735,15 @@ function shareBulkInvoices(invoices) {
 💰 *Grand Total:* ${currency} ${total.toFixed(2)}
 
 📋 *Invoice List:*
-${invoices.map(inv => `• ${inv.invoiceNumber || "INV-" + inv.id}: ${inv.clientName || "No client"} - ${inv.total}`).join("\n")}
+${invoices.map((inv) => `• ${inv.invoiceNumber || "INV-" + inv.id}: ${inv.clientName || "No client"} - ${inv.total}`).join("\n")}
 
 📱 _Generated with Invoice Maker_`;
 
-  window.open(`https://wa.me/?text=${encodeURIComponent(summary)}`, "_blank", "noopener,noreferrer");
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(summary)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
   showToast("WhatsApp Opened", "Bulk invoice summary shared", "success");
   clearSelection();
 }
@@ -1470,16 +1767,20 @@ function initializeMonetization() {
 
   setupPremiumModal();
   setupUsageStatsHandlers();
-  
+
   if (!isPremiumUser) {
     setTimeout(loadAdNetwork, 1000);
   }
 }
 
 function setupPremiumModal() {
-  document.getElementById("closePremiumModal")?.addEventListener("click", closePremiumModal);
-  document.getElementById("cancelPremium")?.addEventListener("click", closePremiumModal);
-  
+  document
+    .getElementById("closePremiumModal")
+    ?.addEventListener("click", closePremiumModal);
+  document
+    .getElementById("cancelPremium")
+    ?.addEventListener("click", closePremiumModal);
+
   const purchaseBtn = document.getElementById("purchasePremium");
   if (purchaseBtn) {
     purchaseBtn.addEventListener("click", async (e) => {
@@ -1487,20 +1788,29 @@ function setupPremiumModal() {
       if (typeof window.getDigitalGoodsService === "function") {
         await purchasePremiumWithGooglePlay();
       } else {
-        window.open("https://play.google.com/store/apps/details?id=io.github.evansmunsha.twa", "_blank");
+        window.open(
+          "https://play.google.com/store/apps/details?id=io.github.evansmunsha.twa",
+          "_blank",
+        );
         closePremiumModal();
-        showToast("Download Required", "Premium available in Android app", "info", 6000);
+        showToast(
+          "Download Required",
+          "Premium available in Android app",
+          "info",
+          6000,
+        );
       }
     });
   }
-  
+
   setupPlatformLinks();
 }
 
 function setupPlatformLinks() {
-  const playStoreUrl = "https://play.google.com/store/apps/details?id=io.github.evansmunsha.twa";
+  const playStoreUrl =
+    "https://play.google.com/store/apps/details?id=io.github.evansmunsha.twa";
   const playStoreLink = document.getElementById("playStoreLink");
-  
+
   if (playStoreLink) {
     playStoreLink.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1536,13 +1846,15 @@ function updatePremiumModalForPlatform() {
 
   if (typeof window.getDigitalGoodsService === "function") {
     if (heading) heading.textContent = "🚀 Unlock Premium Features";
-    if (paymentMethod) paymentMethod.textContent = "One-time payment via Google Play";
+    if (paymentMethod)
+      paymentMethod.textContent = "One-time payment via Google Play";
     if (btn) btn.innerHTML = "🚀 Purchase via Google Play - $4.99";
     if (androidMsg) androidMsg.classList.remove("hidden");
     if (webMsg) webMsg.classList.add("hidden");
   } else {
     if (heading) heading.textContent = "📱 Get Premium on Android";
-    if (paymentMethod) paymentMethod.textContent = "Available on Google Play Store";
+    if (paymentMethod)
+      paymentMethod.textContent = "Available on Google Play Store";
     if (btn) btn.innerHTML = "📲 Get Android App";
     if (webMsg) webMsg.classList.remove("hidden");
     if (androidMsg) androidMsg.classList.add("hidden");
@@ -1591,8 +1903,6 @@ window.addEventListener("load", () => {
   setTimeout(loadAdNetwork, 1000);
 });
 
-
-
 function updateUIForPremiumStatus() {
   const header = document.querySelector(".app-header");
   if (isPremiumUser && header && !header.querySelector(".premium-badge")) {
@@ -1604,13 +1914,13 @@ function updateUIForPremiumStatus() {
 }
 
 // Ensure exportInvoicePDF exists
-if (typeof exportInvoicePDF === 'undefined') {
-  window.exportInvoicePDF = async function(invoice) {
+if (typeof exportInvoicePDF === "undefined") {
+  window.exportInvoicePDF = async function (invoice) {
     const blob = await generatePDFBlob(invoice);
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `${invoice.invoiceNumber || 'invoice'}.pdf`;
+    a.download = `${invoice.invoiceNumber || "invoice"}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1668,7 +1978,11 @@ function showUsageLimitModal(type) {
     pdf: `You've reached your daily limit of ${FREE_LIMITS.pdfs_per_day} PDF generations.`,
   };
 
-  if (confirm(`${limits[type]}\n\nUpgrade to Premium for unlimited usage - just $4.99!`)) {
+  if (
+    confirm(
+      `${limits[type]}\n\nUpgrade to Premium for unlimited usage - just $4.99!`,
+    )
+  ) {
     openPremiumModal();
   }
 }
@@ -1678,7 +1992,8 @@ function getUsageStats() {
   const today = new Date().toDateString();
   const usage = JSON.parse(localStorage.getItem("usage") || "{}");
 
-  let invoices = 0, pdfs = usage[month]?.[today]?.pdf_generated || 0;
+  let invoices = 0,
+    pdfs = usage[month]?.[today]?.pdf_generated || 0;
 
   if (usage[month]) {
     for (const day of Object.values(usage[month])) {
@@ -1712,7 +2027,8 @@ function updateUsageStatsDisplay() {
 
   const invUsage = document.getElementById("invoiceUsage");
   const invProgress = document.getElementById("invoiceProgress");
-  if (invUsage) invUsage.textContent = `${stats.invoicesThisMonth}/${stats.invoiceLimit}`;
+  if (invUsage)
+    invUsage.textContent = `${stats.invoicesThisMonth}/${stats.invoiceLimit}`;
   if (invProgress) {
     const pct = (stats.invoicesThisMonth / stats.invoiceLimit) * 100;
     invProgress.style.width = `${Math.min(pct, 100)}%`;
@@ -1734,14 +2050,19 @@ function updateUsageStatsDisplay() {
 }
 
 function setupUsageStatsHandlers() {
-  document.getElementById("upgradeFromStats")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    openPremiumModal();
-  });
+  document
+    .getElementById("upgradeFromStats")
+    ?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openPremiumModal();
+    });
 
   document.getElementById("viewUsageDetails")?.addEventListener("click", () => {
     const stats = getUsageStats();
-    const month = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const month = new Date().toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
     const msg = `📊 Usage Details for ${month}
 
 📄 Invoices: ${stats.invoicesThisMonth} / ${stats.invoiceLimit} (${Math.round((stats.invoicesThisMonth / stats.invoiceLimit) * 100)}%)
@@ -1772,7 +2093,9 @@ function initializeKeyboardShortcuts() {
       e.preventDefault();
       document.getElementById("addItem").click();
     } else if (e.key === "Escape") {
-      if (!document.getElementById("invoiceModal").classList.contains("hidden")) {
+      if (
+        !document.getElementById("invoiceModal").classList.contains("hidden")
+      ) {
         closeEditModal();
       }
     } else if ((e.ctrlKey || e.metaKey) && e.key === "f") {
@@ -1808,7 +2131,7 @@ function initializeKeyboardShortcuts() {
         "Keyboard Shortcuts",
         "💡 Ctrl+S=save, Ctrl+P=PDF, Ctrl+W=WhatsApp, Ctrl+N=new, Alt+A=add items",
         "info",
-        8000
+        8000,
       );
       localStorage.setItem("hasSeenShortcuts", "true");
     }
@@ -1842,11 +2165,19 @@ function addAriaLabels() {
     }
   });
 
-  document.getElementById("addItem")?.setAttribute("aria-label", "Add new item to invoice");
-  document.getElementById("saveInvoice")?.setAttribute("aria-label", "Save invoice to database");
-  document.getElementById("generatePDF")?.setAttribute("aria-label", "Generate and download PDF");
+  document
+    .getElementById("addItem")
+    ?.setAttribute("aria-label", "Add new item to invoice");
+  document
+    .getElementById("saveInvoice")
+    ?.setAttribute("aria-label", "Save invoice to database");
+  document
+    .getElementById("generatePDF")
+    ?.setAttribute("aria-label", "Generate and download PDF");
 
-  document.querySelectorAll(".card").forEach(card => card.setAttribute("role", "region"));
+  document
+    .querySelectorAll(".card")
+    .forEach((card) => card.setAttribute("role", "region"));
 
   const list = document.getElementById("invoiceList");
   if (list) {
@@ -1859,7 +2190,9 @@ function setupFocusManagement() {
   const modal = document.getElementById("invoiceModal");
   document.addEventListener("keydown", (e) => {
     if (e.key === "Tab" && !modal.classList.contains("hidden")) {
-      const focusable = modal.querySelectorAll('button, input, textarea, select, [tabindex]:not([tabindex="-1"])');
+      const focusable = modal.querySelectorAll(
+        'button, input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      );
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
 
@@ -1879,9 +2212,10 @@ function addSkipNavigation() {
   skip.href = "#main";
   skip.textContent = "Skip to main content";
   skip.className = "skip-link";
-  skip.style.cssText = "position:absolute;top:-40px;left:6px;background:#007bff;color:white;padding:8px;text-decoration:none;border-radius:4px;z-index:1000;transition:top 0.3s";
-  skip.addEventListener("focus", () => skip.style.top = "6px");
-  skip.addEventListener("blur", () => skip.style.top = "-40px");
+  skip.style.cssText =
+    "position:absolute;top:-40px;left:6px;background:#007bff;color:white;padding:8px;text-decoration:none;border-radius:4px;z-index:1000;transition:top 0.3s";
+  skip.addEventListener("focus", () => (skip.style.top = "6px"));
+  skip.addEventListener("blur", () => (skip.style.top = "-40px"));
   document.body.insertBefore(skip, document.body.firstChild);
   document.querySelector("main")?.setAttribute("id", "main");
 }
@@ -1891,11 +2225,12 @@ function setupAriaLiveRegions() {
   announce.id = "announcements";
   announce.setAttribute("aria-live", "polite");
   announce.setAttribute("aria-atomic", "true");
-  announce.style.cssText = "position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden";
+  announce.style.cssText =
+    "position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden";
   document.body.appendChild(announce);
 
   const originalToast = showToast;
-  window.showToast = function(title, message, type, duration) {
+  window.showToast = function (title, message, type, duration) {
     originalToast(title, message, type, duration);
     if (type === "success" || type === "error") {
       announce.textContent = `${title}: ${message}`;
@@ -1931,12 +2266,14 @@ Contact: evansmunsha@gmail.com | +260963266937`);
 
   document.getElementById("supportLink")?.addEventListener("click", (e) => {
     e.preventDefault();
-    if (confirm(`🛠️ Need Help?
+    if (
+      confirm(`🛠️ Need Help?
 
 📧 Email: evansmunsha@gmail.com
 📱 Phone: +260963266937
 
-Contact support via email?`)) {
+Contact support via email?`)
+    ) {
       window.open("mailto:evansmunsha@gmail.com?subject=Invoice Maker Support");
     }
   });
@@ -1948,48 +2285,112 @@ Contact support via email?`)) {
 window.invoiceMakerDebug = {
   checkBillingAPI: async () => {
     console.log("=== BILLING API CHECK ===");
-    console.log("1. Digital Goods:", typeof window.getDigitalGoodsService === 'function' ? "✅" : "❌");
-    
-    if (typeof window.getDigitalGoodsService === 'function') {
+    console.log(
+      "1. Digital Goods API:",
+      typeof window.getDigitalGoodsService === "function"
+        ? "✅ Available"
+        : "❌ Not available (not in TWA)",
+    );
+    console.log(
+      "2. Payment Request API:",
+      typeof PaymentRequest === "function"
+        ? "✅ Available"
+        : "❌ Not available",
+    );
+
+    if (typeof window.getDigitalGoodsService === "function") {
       try {
-        const service = await window.getDigitalGoodsService("play.google.com/billing");
-        console.log("2. Service connected: ✅");
-        const details = await service.getDetails(['premium_unlock']);
-        console.log("3. Product details:", details);
-        if (details.length > 0) {
-          console.log("   Product ID:", details[0].itemId);
-          console.log("   Price:", details[0].price);
-          console.log("   ✅ READY TO PURCHASE");
+        const service = await window.getDigitalGoodsService(
+          "https://play.google.com/billing",
+        );
+        console.log("3. Digital Goods Service: ✅ Connected");
+
+        const details = await service.getDetails(["premium_unlock"]);
+        console.log("4. Product lookup result:", details);
+
+        if (details && details.length > 0) {
+          const product = details[0];
+          console.log("   ✅ Product found!");
+          console.log("   - Item ID:", product.itemId);
+          console.log("   - Title:", product.title);
+          console.log("   - Description:", product.description);
+          console.log(
+            "   - Price:",
+            product.price?.value,
+            product.price?.currency,
+          );
+
+          // Check Payment Request availability
+          const paymentMethods = [
+            {
+              supportedMethods: "https://play.google.com/billing",
+              data: { sku: "premium_unlock" },
+            },
+          ];
+          const paymentDetails = {
+            total: {
+              label: "Test",
+              amount: { currency: "USD", value: "4.99" },
+            },
+          };
+          const request = new PaymentRequest(paymentMethods, paymentDetails);
+          const canPay = await request.canMakePayment();
+          console.log("5. Can make payment:", canPay ? "✅ YES" : "❌ NO");
+
+          if (canPay) {
+            console.log("\n🎉 READY TO ACCEPT PAYMENTS!");
+          }
         } else {
-          console.log("   ❌ Product not found");
+          console.log("   ❌ Product 'premium_unlock' not found");
+          console.log("   Check Google Play Console:");
+          console.log("   - Is the product ID exactly 'premium_unlock'?");
+          console.log("   - Is the product status 'Active'?");
+          console.log("   - Is the app in the same testing track?");
         }
+
+        // Check existing purchases
+        const purchases = await service.listPurchases();
+        console.log(
+          "6. Existing purchases:",
+          purchases.length > 0 ? purchases : "None",
+        );
       } catch (err) {
-        console.error("   ❌ Error:", err.message);
+        console.error("   ❌ Error:", err.name, "-", err.message);
       }
+    } else {
+      console.log("\n⚠️ Not running in Google Play TWA environment");
+      console.log("   Digital Goods API requires the app to be:");
+      console.log("   - Installed from Google Play Store");
+      console.log("   - Running as a Trusted Web Activity (TWA)");
     }
   },
-  
+
   checkPremiumStatus: () => {
     console.log("=== PREMIUM STATUS ===");
     console.log("isPremiumUser:", isPremiumUser ? "✅ PREMIUM" : "❌ FREE");
-    console.log("localStorage:", localStorage.getItem('premiumUser') || "NOT SET");
+    console.log(
+      "localStorage:",
+      localStorage.getItem("premiumUser") || "NOT SET",
+    );
   },
-  
+
   simulatePurchase: () => {
-    localStorage.setItem('premiumUser', 'true');
+    localStorage.setItem("premiumUser", "true");
     isPremiumUser = true;
     hideAds();
     updateUIForPremiumStatus();
-    showToast('Test', 'Premium simulated', 'success');
+    showToast("Test", "Premium simulated", "success");
   },
-  
+
   fullDiagnostic: async () => {
     console.log("\n🔍 FULL DIAGNOSTIC\n");
     await window.invoiceMakerDebug.checkBillingAPI();
     console.log("\n");
     window.invoiceMakerDebug.checkPremiumStatus();
     console.log("\n✅ Complete\n");
-  }
+  },
 };
 
-console.log("💡 TIP: Run 'await invoiceMakerDebug.fullDiagnostic()' to diagnose issues");
+console.log(
+  "💡 TIP: Run 'await invoiceMakerDebug.fullDiagnostic()' to diagnose issues",
+);

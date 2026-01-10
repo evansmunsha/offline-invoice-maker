@@ -37,6 +37,36 @@ Your app already has:
 2. Pay $25 registration fee
 3. Complete developer profile
 
+
+
+<en-IN>
+Initial release of Offline Invoice Maker.
+
+• Create and manage invoices completely offline
+• Generate professional PDF invoices
+• Store invoice history on your device
+• Share invoices via WhatsApp or email
+• One-time Premium upgrade to remove ads and unlock unlimited features
+</en-IN>
+<en-CA>
+Initial release of Offline Invoice Maker.
+
+• Create and manage invoices offline
+• Export invoices as PDF files
+• Invoice history saved locally on your device
+• Easy sharing via WhatsApp and email
+• Optional one-time Premium purchase for unlimited access
+</en-CA>
+<en-US>
+First public release of Offline Invoice Maker.
+
+• Offline invoice creation and management
+• PDF invoice generation
+• Local invoice history storage
+• Quick sharing through WhatsApp and email
+• One-time Premium upgrade to remove ads and unlock all features
+</en-US>
+
 ### 2.2 Create New App
 ```
 1. Click "Create app"
