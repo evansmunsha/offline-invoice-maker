@@ -1,503 +1,818 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline Invoice Maker</title>
-    
-    <!-- PWA Configuration -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ffffff">
-    
-    <!-- Stylesheet -->
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <!-- ==================== HEADER ==================== -->
-    <header class="app-header" role="banner">
-        <h1>Invoice Maker</h1>
-        <p>Create simple invoices. Works offline.</p>
-    </header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Offline Invoice Maker</title>
 
-    <!-- ==================== MAIN CONTENT ==================== -->
-    <main id="main" role="main">
-        
-        <!-- Invoice Details Section -->
-        <section class="card" role="region" aria-labelledby="invoice-details-heading">
-            <h2 id="invoice-details-heading">Invoice Details</h2>
-            <p class="hint">This information appears on your invoice</p>
+        <!-- PWA Configuration -->
+        <link rel="manifest" href="manifest.json" />
+        <meta name="theme-color" content="#ffffff" />
 
-            <label for="businessName">
-                Business Name <span class="required" aria-label="required">*</span>
-                <input id="businessName" placeholder="e.g. Munsha Services" required class="form-field" 
-                       aria-required="true" aria-describedby="businessNameError">
-                <span class="error-message" id="businessNameError" role="alert" aria-live="polite"></span>
-            </label>
+        <!-- Stylesheet -->
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+    <body>
+        <!-- ==================== HEADER ==================== -->
+        <header class="app-header" role="banner">
+            <h1>Invoice Maker</h1>
+            <p>Create simple invoices. Works offline.</p>
+        </header>
 
-            <label for="clientName">
-                Client Name (optional)
-                <input id="clientName" placeholder="e.g. John Banda" class="form-field">
-            </label>
+        <!-- ==================== MAIN CONTENT ==================== -->
+        <main id="main" role="main">
+            <!-- Invoice Details Section -->
+            <section
+                class="card"
+                role="region"
+                aria-labelledby="invoice-details-heading"
+            >
+                <h2 id="invoice-details-heading">Invoice Details</h2>
+                <p class="hint">This information appears on your invoice</p>
 
-            <div class="date-time-group">
-                <label for="invoiceDate">
-                    Invoice Date <span class="required" aria-label="required">*</span>
-                    <input id="invoiceDate" type="date" required class="form-field" 
-                           aria-required="true" aria-describedby="invoiceDateError">
-                    <span class="error-message" id="invoiceDateError" role="alert" aria-live="polite"></span>
+                <label for="businessName">
+                    Business Name
+                    <span class="required" aria-label="required">*</span>
+                    <input
+                        id="businessName"
+                        placeholder="e.g. Munsha Services"
+                        required
+                        class="form-field"
+                        aria-required="true"
+                        aria-describedby="businessNameError"
+                    />
+                    <span
+                        class="error-message"
+                        id="businessNameError"
+                        role="alert"
+                        aria-live="polite"
+                    ></span>
                 </label>
 
-                <label for="invoiceTime">
-                    Invoice Time
-                    <input id="invoiceTime" type="time" class="form-field">
+                <label for="clientName">
+                    Client Name (optional)
+                    <input
+                        id="clientName"
+                        placeholder="e.g. John Banda"
+                        class="form-field"
+                    />
                 </label>
-            </div>
 
-            <label for="invoiceNumber">
-                Invoice Number
-                <input id="invoiceNumber" placeholder="Auto-generated" readonly class="form-field readonly" aria-readonly="true">
-            </label>
-        </section>
+                <div class="date-time-group">
+                    <label for="invoiceDate">
+                        Invoice Date
+                        <span class="required" aria-label="required">*</span>
+                        <input
+                            id="invoiceDate"
+                            type="date"
+                            required
+                            class="form-field"
+                            aria-required="true"
+                            aria-describedby="invoiceDateError"
+                        />
+                        <span
+                            class="error-message"
+                            id="invoiceDateError"
+                            role="alert"
+                            aria-live="polite"
+                        ></span>
+                    </label>
 
-        <!-- Invoice Items Section -->
-        <section class="card" role="region" aria-labelledby="invoice-items-heading">
-            <h2 id="invoice-items-heading">Invoice Items</h2>
-            <p class="hint">Add products or services you are charging for</p>
-
-            <!-- Example Helper -->
-            <div class="items-example">
-                <div class="example-header">
-                    <strong>💡 Example:</strong> "Website Design" × 1 at $500.00 = $500.00
+                    <label for="invoiceTime">
+                        Invoice Time
+                        <input
+                            id="invoiceTime"
+                            type="time"
+                            class="form-field"
+                        />
+                    </label>
                 </div>
-                <div class="example-text">
-                    Enter item name, quantity, and price per unit. Total is calculated automatically.
-                </div>
-            </div>
 
-            <!-- Column Headers -->
-            <div class="items-header">
-                <div class="header-item">Item Description</div>
-                <div class="header-qty">Qty</div>
-                <div class="header-price">Unit Price</div>
-                <div class="header-action">Action</div>
-            </div>
+                <label for="invoiceNumber">
+                    Invoice Number
+                    <input
+                        id="invoiceNumber"
+                        placeholder="Auto-generated"
+                        readonly
+                        class="form-field readonly"
+                        aria-readonly="true"
+                    />
+                </label>
+            </section>
 
-            <!-- Dynamic Items Container -->
-            <div id="items" role="list" aria-label="Invoice items"></div>
+            <!-- Invoice Items Section -->
+            <section
+                class="card"
+                role="region"
+                aria-labelledby="invoice-items-heading"
+            >
+                <h2 id="invoice-items-heading">Invoice Items</h2>
+                <p class="hint">
+                    Add products or services you are charging for
+                </p>
 
-            <button id="addItem" aria-label="Add new item to invoice">+ Add Item</button>
-
-            <label for="currency">
-                Currency
-                <select id="currency" aria-label="Select currency for invoice">
-                    <option value="ZMW">ZMW – Zambian Kwacha</option>
-                    <option value="$">USD – Dollar</option>
-                    <option value="€">EUR – Euro</option>
-                    <option value="£">GBP – Pound</option>
-                </select>
-            </label>
-
-            <p class="total" role="status" aria-live="polite" aria-label="Invoice total">
-                Total: <span id="total">0</span>
-            </p>
-        </section>
-
-        <!-- PDF Settings Section -->
-        <section class="card" role="region" aria-labelledby="pdf-settings-heading">
-            <h2 id="pdf-settings-heading">PDF Template</h2>
-            <p class="hint">Choose how your PDF invoice will look</p>
-
-            <label for="template">
-                Template Style
-                <select id="template" aria-label="Select PDF template style">
-                    <option value="simple">Simple</option>
-                    <option value="boxed">Boxed</option>
-                </select>
-            </label>
-        </section>
-
-        <!-- Actions Section -->
-        <section class="card" role="region" aria-labelledby="actions-heading">
-            <h2 id="actions-heading" class="sr-only">Invoice Actions</h2>
-            
-            <button class="primary" id="saveInvoice" aria-label="Save invoice to database">
-                💾 Save Invoice
-            </button>
-
-            <button class="secondary" id="generatePDF" aria-label="Generate and download PDF">
-                📄 Generate PDF
-            </button>
-
-            <button class="secondary" id="shareInvoice" aria-label="Share invoice">
-                🔗 Share Invoice
-            </button>
-
-            <p class="hint">Works offline. Internet is only needed for sharing.</p>
-
-            <!-- Usage Stats (Free Users) -->
-            <div id="usageStats" class="usage-stats hidden">
-                <div class="usage-header">
-                    <span class="usage-title">📊 Your Usage (Free Plan)</span>
-                    <button id="viewUsageDetails" class="usage-details-btn">View Details</button>
-                </div>
-                <div class="usage-bars">
-                    <div class="usage-bar">
-                        <div class="usage-label">
-                            <span>Invoices this month</span>
-                            <span id="invoiceUsage">0/10</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div id="invoiceProgress" class="progress-fill"></div>
-                        </div>
+                <!-- Example Helper -->
+                <div class="items-example">
+                    <div class="example-header">
+                        <strong>💡 Example:</strong> "Website Design" × 1 at
+                        $500.00 = $500.00
                     </div>
-                    <div class="usage-bar">
-                        <div class="usage-label">
-                            <span>PDFs today</span>
-                            <span id="pdfUsage">0/5</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div id="pdfProgress" class="progress-fill"></div>
-                        </div>
+                    <div class="example-text">
+                        Enter item name, quantity, and price per unit. Total is
+                        calculated automatically.
                     </div>
                 </div>
-                <div class="usage-upgrade">
-                    <p>Need more? <a href="#" id="upgradeFromStats">Upgrade to Premium</a> for unlimited usage!</p>
-                </div>
-            </div>
 
-            <!-- Ad Container (Free Users) -->
+                <!-- Column Headers -->
+                <div class="items-header">
+                    <div class="header-item">Item Description</div>
+                    <div class="header-qty">Qty</div>
+                    <div class="header-price">Unit Price</div>
+                    <div class="header-action">Action</div>
+                </div>
 
-            <div id="adContainer" class="ad-container">
-                <div class="ad-header">
-                    <span class="ad-label">Advertisement</span>
-                </div>
-                <div id="adSpace" class="ad-space">
-                    <ins class="adsbygoogle"
-                        data-loaded="false"
-                         style="display:block"
-                         data-ad-client="ca-app-pub-3267288412255550/2274937759"
-                         data-ad-slot="6300978111"
-                         data-ad-format="auto"
-                         data-full-width-responsive="true"></ins>
-                </div>
-            </div>
-        </section>
+                <!-- Dynamic Items Container -->
+                <div id="items" role="list" aria-label="Invoice items"></div>
 
-        <!-- Invoice History Section -->
-        <section id="history" role="region" aria-labelledby="history-heading">
-            <h2 id="history-heading">Invoice History</h2>
-            
-            <!-- Search & Filter Controls -->
-            <div class="history-controls" role="search">
-                <div class="search-box">
-                    <input type="text" id="searchInvoices" 
-                           placeholder="🔍 Search invoices by client name..." 
-                           class="search-input"
-                           aria-label="Search invoices by client name, business name, or invoice number">
-                </div>
-                <div class="filter-controls">
-                    <div class="select-all-group">
-                        <label class="select-all-label">
-                            <input type="checkbox" id="selectAllInvoices" aria-label="Select all visible invoices">
-                            <span>Select All</span>
-                        </label>
-                    </div>
-                    <label for="sortBy" class="sr-only">Sort invoices by</label>
-                    <select id="sortBy" class="filter-select" aria-label="Sort invoices by">
-                        <option value="date-desc">Newest First</option>
-                        <option value="date-asc">Oldest First</option>
-                        <option value="client-asc">Client A-Z</option>
-                        <option value="total-desc">Highest Amount</option>
+                <button id="addItem" aria-label="Add new item to invoice">
+                    + Add Item
+                </button>
+
+                <label for="currency">
+                    Currency
+                    <select
+                        id="currency"
+                        aria-label="Select currency for invoice"
+                    >
+                        <option value="ZMW">ZMW – Zambian Kwacha</option>
+                        <option value="$">USD – Dollar</option>
+                        <option value="€">EUR – Euro</option>
+                        <option value="£">GBP – Pound</option>
                     </select>
-                </div>
-            </div>
+                </label>
 
-            <!-- Bulk Actions -->
-            <div class="bulk-actions hidden" id="bulkActions">
-                <div class="bulk-info">
-                    <span id="selectedCount">0</span> invoices selected
-                    <button id="expandBulkActions" class="expand-bulk-btn" aria-label="Show more bulk actions">⋯</button>
-                </div>
-                <div class="bulk-buttons">
-                    <div class="bulk-primary-actions">
-                        <button id="bulkWhatsApp" class="whatsapp-quick" aria-label="Share selected invoices via WhatsApp">
-                            💬 WhatsApp
-                        </button>
-                        <button id="bulkShare" class="secondary" aria-label="Share selected invoices">
-                            🔗 Share
+                <p
+                    class="total"
+                    role="status"
+                    aria-live="polite"
+                    aria-label="Invoice total"
+                >
+                    Total: <span id="total">0</span>
+                </p>
+            </section>
+
+            <!-- PDF Settings Section -->
+            <section
+                class="card"
+                role="region"
+                aria-labelledby="pdf-settings-heading"
+            >
+                <h2 id="pdf-settings-heading">PDF Template</h2>
+                <p class="hint">Choose how your PDF invoice will look</p>
+
+                <label for="template">
+                    Template Style
+                    <select
+                        id="template"
+                        aria-label="Select PDF template style"
+                    >
+                        <option value="simple">Simple</option>
+                        <option value="boxed">Boxed</option>
+                    </select>
+                </label>
+            </section>
+
+            <!-- Actions Section -->
+            <section
+                class="card"
+                role="region"
+                aria-labelledby="actions-heading"
+            >
+                <h2 id="actions-heading" class="sr-only">Invoice Actions</h2>
+
+                <button
+                    class="primary"
+                    id="saveInvoice"
+                    aria-label="Save invoice to database"
+                >
+                    💾 Save Invoice
+                </button>
+
+                <button
+                    class="secondary"
+                    id="generatePDF"
+                    aria-label="Generate and download PDF"
+                >
+                    📄 Generate PDF
+                </button>
+
+                <button
+                    class="secondary"
+                    id="shareInvoice"
+                    aria-label="Share invoice"
+                >
+                    🔗 Share Invoice
+                </button>
+
+                <p class="hint">
+                    Works offline. Internet is only needed for sharing.
+                </p>
+
+                <!-- Usage Stats (Free Users) -->
+                <div id="usageStats" class="usage-stats hidden">
+                    <div class="usage-header">
+                        <span class="usage-title"
+                            >📊 Your Usage (Free Plan)</span
+                        >
+                        <button id="viewUsageDetails" class="usage-details-btn">
+                            View Details
                         </button>
                     </div>
-                    <div class="bulk-secondary-actions hidden" id="bulkSecondaryActions">
-                        <button id="bulkExportPDF" class="secondary" aria-label="Export selected invoices as PDF">
-                            📄 Export PDFs
-                        </button>
-                        <button id="bulkDelete" class="danger" aria-label="Delete selected invoices">
-                            🗑️ Delete
-                        </button>
-                        <button id="clearSelection" class="secondary" aria-label="Clear selection">
-                            ✕ Clear
-                        </button>
+                    <div class="usage-bars">
+                        <div class="usage-bar">
+                            <div class="usage-label">
+                                <span>Invoices this month</span>
+                                <span id="invoiceUsage">0/10</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div
+                                    id="invoiceProgress"
+                                    class="progress-fill"
+                                ></div>
+                            </div>
+                        </div>
+                        <div class="usage-bar">
+                            <div class="usage-label">
+                                <span>PDFs today</span>
+                                <span id="pdfUsage">0/5</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div
+                                    id="pdfProgress"
+                                    class="progress-fill"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="usage-upgrade">
+                        <p>
+                            Need more?
+                            <a href="#" id="upgradeFromStats"
+                                >Upgrade to Premium</a
+                            >
+                            for unlimited usage!
+                        </p>
                     </div>
                 </div>
-            </div>
 
-            <!-- Invoice List -->
-            <ul id="invoiceList" role="list" aria-label="List of saved invoices"></ul>
-        </section>
-    </main>
+                <!-- Ad Container (Free Users) -->
 
-    <!-- ==================== MODALS ==================== -->
-    
-    <!-- Edit Invoice Modal -->
-    <div id="invoiceModal" class="modal hidden" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Edit Invoice</h3>
-                <button class="modal-close" id="closeModal" aria-label="Close dialog">&times;</button>
-            </div>
+                <div id="adContainer" class="ad-container">
+                    <div class="ad-header">
+                        <span class="ad-label">Advertisement</span>
+                    </div>
+                    <div id="adSpace" class="ad-space">
+                        <ins
+                            class="adsbygoogle"
+                            data-loaded="false"
+                            style="display: block"
+                            data-ad-client="ca-app-pub-3267288412255550"
+                            data-ad-slot="3990665481"
+                            data-ad-format="auto"
+                            data-full-width-responsive="true"
+                        ></ins>
+                    </div>
+                </div>
+            </section>
 
-            <div class="modal-body">
-                <div class="modal-section">
-                    <label for="editInvoiceNumber">
-                        Invoice Number
-                        <input id="editInvoiceNumber" readonly class="readonly">
-                    </label>
+            <!-- Invoice History Section -->
+            <section
+                id="history"
+                role="region"
+                aria-labelledby="history-heading"
+            >
+                <h2 id="history-heading">Invoice History</h2>
 
-                    <label for="editBusinessName">
-                        Business Name
-                        <input id="editBusinessName" placeholder="Business Name">
-                    </label>
+                <!-- Search & Filter Controls -->
+                <div class="history-controls" role="search">
+                    <div class="search-box">
+                        <input
+                            type="text"
+                            id="searchInvoices"
+                            placeholder="🔍 Search invoices by client name..."
+                            class="search-input"
+                            aria-label="Search invoices by client name, business name, or invoice number"
+                        />
+                    </div>
+                    <div class="filter-controls">
+                        <div class="select-all-group">
+                            <label class="select-all-label">
+                                <input
+                                    type="checkbox"
+                                    id="selectAllInvoices"
+                                    aria-label="Select all visible invoices"
+                                />
+                                <span>Select All</span>
+                            </label>
+                        </div>
+                        <label for="sortBy" class="sr-only"
+                            >Sort invoices by</label
+                        >
+                        <select
+                            id="sortBy"
+                            class="filter-select"
+                            aria-label="Sort invoices by"
+                        >
+                            <option value="date-desc">Newest First</option>
+                            <option value="date-asc">Oldest First</option>
+                            <option value="client-asc">Client A-Z</option>
+                            <option value="total-desc">Highest Amount</option>
+                        </select>
+                    </div>
+                </div>
 
-                    <label for="editClientName">
-                        Client Name
-                        <input id="editClientName" placeholder="Client Name">
-                    </label>
+                <!-- Bulk Actions -->
+                <div class="bulk-actions hidden" id="bulkActions">
+                    <div class="bulk-info">
+                        <span id="selectedCount">0</span> invoices selected
+                        <button
+                            id="expandBulkActions"
+                            class="expand-bulk-btn"
+                            aria-label="Show more bulk actions"
+                        >
+                            ⋯
+                        </button>
+                    </div>
+                    <div class="bulk-buttons">
+                        <div class="bulk-primary-actions">
+                            <button
+                                id="bulkWhatsApp"
+                                class="whatsapp-quick"
+                                aria-label="Share selected invoices via WhatsApp"
+                            >
+                                💬 WhatsApp
+                            </button>
+                            <button
+                                id="bulkShare"
+                                class="secondary"
+                                aria-label="Share selected invoices"
+                            >
+                                🔗 Share
+                            </button>
+                        </div>
+                        <div
+                            class="bulk-secondary-actions hidden"
+                            id="bulkSecondaryActions"
+                        >
+                            <button
+                                id="bulkExportPDF"
+                                class="secondary"
+                                aria-label="Export selected invoices as PDF"
+                            >
+                                📄 Export PDFs
+                            </button>
+                            <button
+                                id="bulkDelete"
+                                class="danger"
+                                aria-label="Delete selected invoices"
+                            >
+                                🗑️ Delete
+                            </button>
+                            <button
+                                id="clearSelection"
+                                class="secondary"
+                                aria-label="Clear selection"
+                            >
+                                ✕ Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-                    <div class="date-time-group">
-                        <label for="editDate">
-                            Date
-                            <input id="editDate" type="date">
+                <!-- Invoice List -->
+                <ul
+                    id="invoiceList"
+                    role="list"
+                    aria-label="List of saved invoices"
+                ></ul>
+            </section>
+        </main>
+
+        <!-- ==================== MODALS ==================== -->
+
+        <!-- Edit Invoice Modal -->
+        <div
+            id="invoiceModal"
+            class="modal hidden"
+            role="dialog"
+            aria-labelledby="modalTitle"
+            aria-modal="true"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Edit Invoice</h3>
+                    <button
+                        class="modal-close"
+                        id="closeModal"
+                        aria-label="Close dialog"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="modal-section">
+                        <label for="editInvoiceNumber">
+                            Invoice Number
+                            <input
+                                id="editInvoiceNumber"
+                                readonly
+                                class="readonly"
+                            />
                         </label>
-                        <label for="editTime">
-                            Time
-                            <input id="editTime" type="time">
+
+                        <label for="editBusinessName">
+                            Business Name
+                            <input
+                                id="editBusinessName"
+                                placeholder="Business Name"
+                            />
                         </label>
+
+                        <label for="editClientName">
+                            Client Name
+                            <input
+                                id="editClientName"
+                                placeholder="Client Name"
+                            />
+                        </label>
+
+                        <div class="date-time-group">
+                            <label for="editDate">
+                                Date
+                                <input id="editDate" type="date" />
+                            </label>
+                            <label for="editTime">
+                                Time
+                                <input id="editTime" type="time" />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h4 id="edit-items-heading">Items</h4>
+                        <div class="edit-items-header">
+                            <div class="header-item">Item Description</div>
+                            <div class="header-qty">Qty</div>
+                            <div class="header-price">Unit Price</div>
+                            <div class="header-action">Action</div>
+                        </div>
+                        <div
+                            id="editItems"
+                            role="list"
+                            aria-labelledby="edit-items-heading"
+                        ></div>
+                        <button
+                            type="button"
+                            id="addEditItem"
+                            class="secondary"
+                        >
+                            + Add Item
+                        </button>
+                    </div>
+
+                    <div class="modal-section">
+                        <div
+                            class="total-display"
+                            role="status"
+                            aria-live="polite"
+                        >
+                            <strong
+                                >Total:
+                                <span id="editTotal">$0.00</span></strong
+                            >
+                        </div>
                     </div>
                 </div>
 
-                <div class="modal-section">
-                    <h4 id="edit-items-heading">Items</h4>
-                    <div class="edit-items-header">
-                        <div class="header-item">Item Description</div>
-                        <div class="header-qty">Qty</div>
-                        <div class="header-price">Unit Price</div>
-                        <div class="header-action">Action</div>
-                    </div>
-                    <div id="editItems" role="list" aria-labelledby="edit-items-heading"></div>
-                    <button type="button" id="addEditItem" class="secondary">+ Add Item</button>
+                <div class="modal-footer">
+                    <button id="saveEdit" class="primary">
+                        💾 Save Changes
+                    </button>
+                    <button id="duplicateInvoice" class="secondary">
+                        📋 Duplicate
+                    </button>
+                    <button id="cancelEdit" class="secondary">Cancel</button>
                 </div>
-
-                <div class="modal-section">
-                    <div class="total-display" role="status" aria-live="polite">
-                        <strong>Total: <span id="editTotal">$0.00</span></strong>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button id="saveEdit" class="primary">💾 Save Changes</button>
-                <button id="duplicateInvoice" class="secondary">📋 Duplicate</button>
-                <button id="cancelEdit" class="secondary">Cancel</button>
             </div>
         </div>
-    </div>
 
-    <!-- Share Modal -->
-    <div id="shareModal" class="modal hidden" role="dialog" aria-labelledby="shareModalTitle" aria-modal="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="shareModalTitle">Share Invoice</h3>
-                <button class="modal-close" id="closeShareModal" aria-label="Close share dialog">&times;</button>
-            </div>
-
-            <div class="modal-body">
-                <div class="share-options">
-                    <button class="share-option" id="shareNative">
-                        <div class="share-option-icon">📱</div>
-                        <div class="share-option-title">Native Share</div>
-                        <div class="share-option-desc">Use your device's share menu</div>
-                    </button>
-
-                    <button class="share-option" id="sharePDF">
-                        <div class="share-option-icon">📄</div>
-                        <div class="share-option-title">Share PDF</div>
-                        <div class="share-option-desc">Generate PDF and share</div>
-                    </button>
-
-                    <button class="share-option" id="shareEmail">
-                        <div class="share-option-icon">✉️</div>
-                        <div class="share-option-title">Email</div>
-                        <div class="share-option-desc">Send via email client</div>
-                    </button>
-
-                    <button class="share-option" id="shareWhatsApp">
-                        <div class="share-option-icon">💬</div>
-                        <div class="share-option-title">WhatsApp</div>
-                        <div class="share-option-desc">Send via WhatsApp</div>
-                    </button>
-
-                    <button class="share-option" id="shareData">
-                        <div class="share-option-icon">📋</div>
-                        <div class="share-option-title">Copy Data</div>
-                        <div class="share-option-desc">Copy invoice details as text</div>
+        <!-- Share Modal -->
+        <div
+            id="shareModal"
+            class="modal hidden"
+            role="dialog"
+            aria-labelledby="shareModalTitle"
+            aria-modal="true"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="shareModalTitle">Share Invoice</h3>
+                    <button
+                        class="modal-close"
+                        id="closeShareModal"
+                        aria-label="Close share dialog"
+                    >
+                        &times;
                     </button>
                 </div>
 
-                <div class="share-link-section">
-                    <h4>WhatsApp Direct Contact</h4>
-                    <p class="hint">Enter phone number to send directly to WhatsApp contact</p>
-                    <div class="share-link-group">
-                        <input type="tel" id="whatsappNumber" class="share-link-input" 
-                               placeholder="+1234567890" aria-label="WhatsApp phone number">
-                        <button id="sendWhatsAppDirect" class="copy-button">💬 Send</button>
+                <div class="modal-body">
+                    <div class="share-options">
+                        <button class="share-option" id="shareNative">
+                            <div class="share-option-icon">📱</div>
+                            <div class="share-option-title">Native Share</div>
+                            <div class="share-option-desc">
+                                Use your device's share menu
+                            </div>
+                        </button>
+
+                        <button class="share-option" id="sharePDF">
+                            <div class="share-option-icon">📄</div>
+                            <div class="share-option-title">Share PDF</div>
+                            <div class="share-option-desc">
+                                Generate PDF and share
+                            </div>
+                        </button>
+
+                        <button class="share-option" id="shareEmail">
+                            <div class="share-option-icon">✉️</div>
+                            <div class="share-option-title">Email</div>
+                            <div class="share-option-desc">
+                                Send via email client
+                            </div>
+                        </button>
+
+                        <button class="share-option" id="shareWhatsApp">
+                            <div class="share-option-icon">💬</div>
+                            <div class="share-option-title">WhatsApp</div>
+                            <div class="share-option-desc">
+                                Send via WhatsApp
+                            </div>
+                        </button>
+
+                        <button class="share-option" id="shareData">
+                            <div class="share-option-icon">📋</div>
+                            <div class="share-option-title">Copy Data</div>
+                            <div class="share-option-desc">
+                                Copy invoice details as text
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="share-link-section">
+                        <h4>WhatsApp Direct Contact</h4>
+                        <p class="hint">
+                            Enter phone number to send directly to WhatsApp
+                            contact
+                        </p>
+                        <div class="share-link-group">
+                            <input
+                                type="tel"
+                                id="whatsappNumber"
+                                class="share-link-input"
+                                placeholder="+1234567890"
+                                aria-label="WhatsApp phone number"
+                            />
+                            <button id="sendWhatsAppDirect" class="copy-button">
+                                💬 Send
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="share-link-section">
+                        <h4>Quick Share Link</h4>
+                        <p class="hint">
+                            Copy this link to share invoice details
+                        </p>
+                        <div class="share-link-group">
+                            <input
+                                type="text"
+                                id="shareLink"
+                                class="share-link-input"
+                                readonly
+                                aria-label="Shareable link for invoice"
+                            />
+                            <button id="copyLink" class="copy-button">
+                                📋 Copy
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="share-link-section">
-                    <h4>Quick Share Link</h4>
-                    <p class="hint">Copy this link to share invoice details</p>
-                    <div class="share-link-group">
-                        <input type="text" id="shareLink" class="share-link-input" readonly 
-                               aria-label="Shareable link for invoice">
-                        <button id="copyLink" class="copy-button">📋 Copy</button>
-                    </div>
+                <div class="modal-footer">
+                    <button id="closeShareModalBtn" class="secondary">
+                        Close
+                    </button>
                 </div>
             </div>
-
-            <div class="modal-footer">
-                <button id="closeShareModalBtn" class="secondary">Close</button>
-            </div>
         </div>
-    </div>
 
-    <!-- Premium Upgrade Modal -->
-    <div id="premiumModal" class="modal hidden" role="dialog" aria-labelledby="premiumModalTitle" aria-modal="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="premiumModalTitle">Upgrade to Premium</h3>
-                <button class="modal-close" id="closePremiumModal" aria-label="Close premium dialog">&times;</button>
-            </div>
+        <!-- Premium Upgrade Modal -->
+        <div
+            id="premiumModal"
+            class="modal hidden"
+            role="dialog"
+            aria-labelledby="premiumModalTitle"
+            aria-modal="true"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="premiumModalTitle">Upgrade to Premium</h3>
+                    <button
+                        class="modal-close"
+                        id="closePremiumModal"
+                        aria-label="Close premium dialog"
+                    >
+                        &times;
+                    </button>
+                </div>
 
-            <div class="modal-body">
-                <div class="premium-features">
-                    <h4 id="premiumModalHeading">🚀 Unlock Premium Features</h4>
-                    
-                    <div class="feature-list">
-                        <div class="feature-item">
-                            <span class="feature-icon">✅</span>
-                            <span>Remove all advertisements</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">✅</span>
-                            <span>Remove watermark from PDFs</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">✅</span>
-                            <span>Unlimited invoice generation</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">✅</span>
-                            <span>Priority customer support</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">✅</span>
-                            <span>Lifetime updates included</span>
-                        </div>
-                    </div>
+                <div class="modal-body">
+                    <div class="premium-features">
+                        <h4 id="premiumModalHeading">
+                            🚀 Unlock Premium Features
+                        </h4>
 
-                    <div class="pricing">
-                        <div class="price-tag">
-                            <span class="price-amount">$4.99</span>
-                            <span class="price-period" id="paymentMethod">One-time payment</span>
+                        <div class="feature-list">
+                            <div class="feature-item">
+                                <span class="feature-icon">✅</span>
+                                <span>Remove all advertisements</span>
+                            </div>
+                            <div class="feature-item">
+                                <span class="feature-icon">✅</span>
+                                <span>Remove watermark from PDFs</span>
+                            </div>
+                            <div class="feature-item">
+                                <span class="feature-icon">✅</span>
+                                <span>Unlimited invoice generation</span>
+                            </div>
+                            <div class="feature-item">
+                                <span class="feature-icon">✅</span>
+                                <span>Priority customer support</span>
+                            </div>
+                            <div class="feature-item">
+                                <span class="feature-icon">✅</span>
+                                <span>Lifetime updates included</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Platform Messages -->
-                    <div id="platformMessage" class="platform-message hidden">
-                        <div id="webMessage" class="platform-msg">
-                            <p>📱 <strong>Get the Android App</strong></p>
-                            <p>Premium features are available in our Android app on Google Play Store.</p>
-                            <a href="#" id="playStoreLink" class="play-store-link">📲 Download from Play Store</a>
+                        <div class="pricing">
+                            <div class="price-tag">
+                                <span class="price-amount">$4.99</span>
+                                <span class="price-period" id="paymentMethod"
+                                    >One-time payment</span
+                                >
+                            </div>
                         </div>
-                        <div id="androidMessage" class="platform-msg hidden">
-                            <p>💳 <strong>Secure Google Play Payment</strong></p>
-                            <p>Payment handled securely by Google Play. No card details stored in app.</p>
+
+                        <!-- Platform Messages -->
+                        <div
+                            id="platformMessage"
+                            class="platform-message hidden"
+                        >
+                            <div id="webMessage" class="platform-msg">
+                                <p>📱 <strong>Get the Android App</strong></p>
+                                <p>
+                                    Premium features are available in our
+                                    Android app on Google Play Store.
+                                </p>
+                                <a
+                                    href="#"
+                                    id="playStoreLink"
+                                    class="play-store-link"
+                                    >📲 Download from Play Store</a
+                                >
+                            </div>
+                            <div
+                                id="androidMessage"
+                                class="platform-msg hidden"
+                            >
+                                <p>
+                                    💳
+                                    <strong>Secure Google Play Payment</strong>
+                                </p>
+                                <p>
+                                    Payment handled securely by Google Play. No
+                                    card details stored in app.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="modal-footer">
-                <button id="purchasePremium" class="primary premium-btn">🚀 Upgrade Now - $4.99</button>
-                <button id="cancelPremium" class="secondary">Maybe Later</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== OVERLAYS ==================== -->
-    
-    <!-- Toast Notifications -->
-    <div id="toast-container" aria-live="polite" aria-label="Notifications"></div>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="loading-message">
-        <div class="loading-spinner">
-            <div class="spinner" aria-hidden="true"></div>
-            <p id="loading-message">Generating PDF...</p>
-        </div>
-    </div>
-
-    <!-- ==================== FOOTER ==================== -->
-    <footer class="app-footer">
-        <div class="footer-content">
-            <div class="footer-links">
-                <a href="privacy-policy.html" target="_blank" class="footer-link">Privacy Policy</a>
-                <span class="footer-separator">•</span>
-                <a href="terms-of-service.html" target="_blank" class="footer-link">Terms of Service</a>
-                <span class="footer-separator">•</span>
-                <a href="#" id="aboutApp" class="footer-link">About</a>
-                <span class="footer-separator">•</span>
-                <a href="#" id="supportLink" class="footer-link">Support</a>
-            </div>
-            <div class="footer-text">
-                <p>&copy; 2026 Invoice Maker - Professional invoicing made simple</p>
-                <p class="footer-tagline">Your data stays on your device • Privacy-first • Offline-ready</p>
+                <div class="modal-footer">
+                    <button id="purchasePremium" class="primary premium-btn">
+                        🚀 Upgrade Now - $4.99
+                    </button>
+                    <button id="cancelPremium" class="secondary">
+                        Maybe Later
+                    </button>
+                </div>
             </div>
         </div>
-    </footer>
 
-    <!-- ==================== SCRIPTS ==================== -->
-    
-    <!-- External Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3267288412255550/2274937759" crossorigin="anonymous"></script>
+        <!-- ==================== OVERLAYS ==================== -->
 
-    <!-- App Scripts -->
-     <script src="./js/ad-config.js"></script>
-    <script src="./js/storage.js"></script>
-    <script src="./js/pdf.js"></script>
-    <script src="./js/app.js"></script>
+        <!-- Toast Notifications -->
+        <div
+            id="toast-container"
+            aria-live="polite"
+            aria-label="Notifications"
+        ></div>
 
-    <!-- Service Worker -->
-    <script>
-        if ("serviceWorker" in navigator) {
-            window.addEventListener("load", () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log("✅ Service Worker registered:", reg))
-                    .catch(err => console.error("❌ Service Worker registration failed:", err));
-            });
-        }
-    </script>
-</body>
+        <!-- Loading Overlay -->
+        <div
+            id="loading-overlay"
+            class="loading-overlay hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="loading-message"
+        >
+            <div class="loading-spinner">
+                <div class="spinner" aria-hidden="true"></div>
+                <p id="loading-message">Generating PDF...</p>
+            </div>
+        </div>
+
+        <!-- ==================== FOOTER ==================== -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a
+                        href="privacy-policy.html"
+                        target="_blank"
+                        class="footer-link"
+                        >Privacy Policy</a
+                    >
+                    <span class="footer-separator">•</span>
+                    <a
+                        href="terms-of-service.html"
+                        target="_blank"
+                        class="footer-link"
+                        >Terms of Service</a
+                    >
+                    <span class="footer-separator">•</span>
+                    <a href="#" id="aboutApp" class="footer-link">About</a>
+                    <span class="footer-separator">•</span>
+                    <a href="#" id="supportLink" class="footer-link">Support</a>
+                </div>
+                <div class="footer-text">
+                    <p>
+                        &copy; 2026 Invoice Maker - Professional invoicing made
+                        simple
+                    </p>
+                    <p class="footer-tagline">
+                        Your data stays on your device • Privacy-first •
+                        Offline-ready
+                    </p>
+                </div>
+            </div>
+        </footer>
+
+        <!-- ==================== SCRIPTS ==================== -->
+
+        <!-- External Libraries -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3267288412255550~6408450423"
+            crossorigin="anonymous"
+        ></script>
+
+        <!-- App Scripts -->
+        <script src="./js/ad-config.js"></script>
+        <script src="./js/storage.js"></script>
+        <script src="./js/pdf.js"></script>
+        <script src="./js/app.js"></script>
+
+        <!-- Service Worker -->
+        <script>
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker
+                        .register("./sw.js")
+                        .then((reg) =>
+                            console.log("✅ Service Worker registered:", reg),
+                        )
+                        .catch((err) =>
+                            console.error(
+                                "❌ Service Worker registration failed:",
+                                err,
+                            ),
+                        );
+                });
+            }
+        </script>
+    </body>
 </html>
-
