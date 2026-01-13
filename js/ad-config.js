@@ -39,7 +39,7 @@ const AD_CONFIG = {
   },
 
   // ✅ PRODUCTION MODE ENABLED
-  ENVIRONMENT: "TEST",
+  ENVIRONMENT: "PRODUCTION",
 
   // Get current configuration based on environment
   getCurrent() {
