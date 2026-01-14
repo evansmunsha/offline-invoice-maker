@@ -882,16 +882,71 @@ function renderInvoiceList(invoices) {
       };
     }
     li.querySelector("[data-delete]").onclick = async () => {
-      if (confirm(`Delete invoice ${inv.invoiceNumber || inv.id}?`)) {
-        try {
-          await deleteInvoice(inv.id);
-          await loadHistory();
-          showToast("Deleted", "Invoice deleted successfully", "success");
-        } catch (error) {
-          showToast("Error", "Failed to delete invoice", "error");
-        }
-      }
-    };
+      const invoiceNum = inv.invoiceNumber || inv.id;
+  
+        // Create custom confirmation
+        const notification = document.createElement("div");
+        notification.className = "draft-recovery-notification";
+        notification.innerHTML = `
+          <div class="draft-recovery-content">
+            <h4>🗑️ Delete Invoice</h4>
+            <p>Delete invoice ${invoiceNum}? This cannot be undone.</p>
+            <div class="draft-recovery-actions">
+              <button class="danger draft-recover-btn">Delete</button>
+              <button class="secondary draft-discard-btn">Cancel</button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        const backdrop = document.createElement("div");
+        backdrop.className = "draft-recovery-backdrop";
+        document.body.appendChild(backdrop);
+        
+        setTimeout(() => {
+          notification.classList.add("show");
+          backdrop.classList.add("show");
+        }, 10);
+        
+        // Delete button
+        notification.querySelector(".draft-recover-btn").onclick = async () => {
+          notification.classList.remove("show");
+          backdrop.classList.remove("show");
+          setTimeout(() => {
+            notification.remove();
+            backdrop.remove();
+          }, 300);
+          
+          try {
+            await deleteInvoice(inv.id);
+            await loadHistory();
+            showToast("Deleted", "Invoice deleted successfully", "success");
+          } catch (error) {
+            showToast("Error", "Failed to delete invoice", "error");
+          }
+        };
+        
+        // Cancel button
+        notification.querySelector(".draft-discard-btn").onclick = () => {
+          notification.classList.remove("show");
+          backdrop.classList.remove("show");
+          setTimeout(() => {
+            notification.remove();
+            backdrop.remove();
+          }, 300);
+        };
+        
+        // Click backdrop to cancel
+        backdrop.onclick = () => {
+          notification.classList.remove("show");
+          backdrop.classList.remove("show");
+          setTimeout(() => {
+            notification.remove();
+            backdrop.remove();
+          }, 300);
+        };
+      };
 
     li.querySelector(".invoice-checkbox").addEventListener("change", (e) => {
       const id = parseInt(e.target.dataset.invoiceId);
@@ -1302,17 +1357,68 @@ function checkForSavedDraft() {
     }
 
     const date = new Date(draft.timestamp).toLocaleString();
+    
     setTimeout(() => {
-      if (confirm(`Found unsaved work from ${date}. Recover it?`)) {
+      // Create custom notification with buttons
+      const notification = document.createElement("div");
+      notification.className = "draft-recovery-notification";
+      notification.innerHTML = `
+        <div class="draft-recovery-content">
+          <h4>💾 Unsaved Work Found</h4>
+          <p>Found unsaved invoice from ${date}</p>
+          <div class="draft-recovery-actions">
+            <button class="primary draft-recover-btn">Recover</button>
+            <button class="secondary draft-discard-btn">Discard</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Add backdrop
+      const backdrop = document.createElement("div");
+      backdrop.className = "draft-recovery-backdrop";
+      document.body.appendChild(backdrop);
+      
+      // Show with animation
+      setTimeout(() => {
+        notification.classList.add("show");
+        backdrop.classList.add("show");
+      }, 10);
+      
+      // Recover button
+      notification.querySelector(".draft-recover-btn").onclick = () => {
         recoverDraft(draft);
-        showToast(
-          "Recovered",
-          "Your unsaved work has been restored",
-          "success",
-        );
-      } else {
+        notification.classList.remove("show");
+        backdrop.classList.remove("show");
+        setTimeout(() => {
+          notification.remove();
+          backdrop.remove();
+        }, 300);
+        showToast("Recovered", "Your unsaved work has been restored", "success");
+      };
+      
+      // Discard button
+      notification.querySelector(".draft-discard-btn").onclick = () => {
         clearDraft();
-      }
+        notification.classList.remove("show");
+        backdrop.classList.remove("show");
+        setTimeout(() => {
+          notification.remove();
+          backdrop.remove();
+        }, 300);
+        showToast("Discarded", "Draft removed", "info", 2000);
+      };
+      
+      // Click backdrop to dismiss
+      backdrop.onclick = () => {
+        notification.classList.remove("show");
+        backdrop.classList.remove("show");
+        setTimeout(() => {
+          notification.remove();
+          backdrop.remove();
+        }, 300);
+      };
     }, 1500);
   } catch (error) {
     localStorage.removeItem("invoiceDraft");
@@ -2026,25 +2132,77 @@ async function handleBulkWhatsApp() {
 }
 
 async function handleBulkDelete() {
-  if (
-    !confirm(`Delete ${selectedInvoices.size} invoices? This cannot be undone.`)
-  )
-    return;
-
-  try {
-    for (const id of selectedInvoices) {
-      await deleteInvoice(id);
+  const count = selectedInvoices.size;
+  
+  // Create custom confirmation
+  const notification = document.createElement("div");
+  notification.className = "draft-recovery-notification";
+  notification.innerHTML = `
+    <div class="draft-recovery-content">
+      <h4>🗑️ Delete ${count} Invoices</h4>
+      <p>Delete ${count} invoices? This cannot be undone.</p>
+      <div class="draft-recovery-actions">
+        <button class="danger draft-recover-btn">Delete All</button>
+        <button class="secondary draft-discard-btn">Cancel</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  const backdrop = document.createElement("div");
+  backdrop.className = "draft-recovery-backdrop";
+  document.body.appendChild(backdrop);
+  
+  setTimeout(() => {
+    notification.classList.add("show");
+    backdrop.classList.add("show");
+  }, 10);
+  
+  // Delete button
+  notification.querySelector(".draft-recover-btn").onclick = async () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
+    
+    try {
+      for (const id of selectedInvoices) {
+        await deleteInvoice(id);
+      }
+      clearSelection();
+      await loadHistory();
+      showToast(
+        "Deleted",
+        `${count} invoices deleted`,
+        "success",
+      );
+    } catch (error) {
+      showToast("Error", "Failed to delete some invoices", "error");
     }
-    clearSelection();
-    await loadHistory();
-    showToast(
-      "Deleted",
-      `${selectedInvoices.size} invoices deleted`,
-      "success",
-    );
-  } catch (error) {
-    showToast("Error", "Failed to delete some invoices", "error");
-  }
+  };
+  
+  // Cancel button
+  notification.querySelector(".draft-discard-btn").onclick = () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
+  };
+  
+  // Click backdrop to cancel
+  backdrop.onclick = () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
+  };
 }
 
 function clearSelection() {
@@ -2356,13 +2514,62 @@ function showUsageLimitModal(type) {
     pdf: `You've reached your daily limit of ${FREE_LIMITS.pdfs_per_day} PDF generations.`,
   };
 
-  if (
-    confirm(
-      `${limits[type]}\n\nUpgrade to Premium for unlimited usage - just $4.99!`,
-    )
-  ) {
+  // Create custom notification
+  const notification = document.createElement("div");
+  notification.className = "draft-recovery-notification";
+  notification.innerHTML = `
+    <div class="draft-recovery-content">
+      <h4>⚠️ Limit Reached</h4>
+      <p>${limits[type]}</p>
+      <p style="margin-top: 12px;">Upgrade to Premium for unlimited usage - just $4.99!</p>
+      <div class="draft-recovery-actions">
+        <button class="primary draft-recover-btn">Upgrade Now</button>
+        <button class="secondary draft-discard-btn">Maybe Later</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  const backdrop = document.createElement("div");
+  backdrop.className = "draft-recovery-backdrop";
+  document.body.appendChild(backdrop);
+  
+  setTimeout(() => {
+    notification.classList.add("show");
+    backdrop.classList.add("show");
+  }, 10);
+  
+  // Upgrade button
+  notification.querySelector(".draft-recover-btn").onclick = () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
     openPremiumModal();
-  }
+  };
+  
+  // Maybe Later button
+  notification.querySelector(".draft-discard-btn").onclick = () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
+  };
+  
+  // Click backdrop to dismiss
+  backdrop.onclick = () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
+  };
 }
 
 function getUsageStats() {
@@ -2436,20 +2643,75 @@ function setupUsageStatsHandlers() {
     });
 
   document.getElementById("viewUsageDetails")?.addEventListener("click", () => {
-    const stats = getUsageStats();
-    const month = new Date().toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-    const msg = `📊 Usage Details for ${month}
-
-📄 Invoices: ${stats.invoicesThisMonth} / ${stats.invoiceLimit} (${Math.round((stats.invoicesThisMonth / stats.invoiceLimit) * 100)}%)
-📱 PDFs Today: ${stats.pdfsTodayy} / ${stats.pdfLimit} (${Math.round((stats.pdfsTodayy / stats.pdfLimit) * 100)}%)
-
-Upgrade to Premium for unlimited usage!`;
-
-    if (confirm(msg + "\n\nUpgrade now?")) openPremiumModal();
+  const stats = getUsageStats();
+  const month = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
   });
+  
+  const invoicePercent = Math.round((stats.invoicesThisMonth / stats.invoiceLimit) * 100);
+  const pdfPercent = Math.round((stats.pdfsTodayy / stats.pdfLimit) * 100);
+  
+  // Create custom notification
+  const notification = document.createElement("div");
+  notification.className = "draft-recovery-notification";
+  notification.innerHTML = `
+    <div class="draft-recovery-content">
+      <h4>📊 Usage Details for ${month}</h4>
+      <p style="line-height: 1.8; margin: 12px 0;">
+        <strong>📄 Invoices:</strong> ${stats.invoicesThisMonth} / ${stats.invoiceLimit} (${invoicePercent}%)<br>
+        <strong>📱 PDFs Today:</strong> ${stats.pdfsTodayy} / ${stats.pdfLimit} (${pdfPercent}%)
+      </p>
+      <p style="margin-top: 12px;">Upgrade to Premium for unlimited usage!</p>
+      <div class="draft-recovery-actions">
+        <button class="primary draft-recover-btn">Upgrade Now</button>
+        <button class="secondary draft-discard-btn">Close</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  const backdrop = document.createElement("div");
+  backdrop.className = "draft-recovery-backdrop";
+  document.body.appendChild(backdrop);
+  
+  setTimeout(() => {
+    notification.classList.add("show");
+    backdrop.classList.add("show");
+  }, 10);
+  
+  // Upgrade button
+  notification.querySelector(".draft-recover-btn").onclick = () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
+    openPremiumModal();
+  };
+  
+  // Close button
+  notification.querySelector(".draft-discard-btn").onclick = () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
+  };
+  
+  // Click backdrop to dismiss
+  backdrop.onclick = () => {
+    notification.classList.remove("show");
+    backdrop.classList.remove("show");
+    setTimeout(() => {
+      notification.remove();
+      backdrop.remove();
+    }, 300);
+  };
+});
 }
 
 /* =========================
@@ -2465,8 +2727,67 @@ function initializeKeyboardShortcuts() {
       document.getElementById("generatePDF").click();
     } else if ((e.ctrlKey || e.metaKey) && e.key === "n") {
       e.preventDefault();
-      if (hasUnsavedChanges && !confirm("Unsaved changes. Start new?")) return;
-      resetForm();
+      
+      if (hasUnsavedChanges) {
+        // Create custom confirmation
+        const notification = document.createElement("div");
+        notification.className = "draft-recovery-notification";
+        notification.innerHTML = `
+          <div class="draft-recovery-content">
+            <h4>⚠️ Unsaved Changes</h4>
+            <p>You have unsaved changes. Start a new invoice?</p>
+            <div class="draft-recovery-actions">
+              <button class="primary draft-recover-btn">Start New</button>
+              <button class="secondary draft-discard-btn">Cancel</button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        const backdrop = document.createElement("div");
+        backdrop.className = "draft-recovery-backdrop";
+        document.body.appendChild(backdrop);
+        
+        setTimeout(() => {
+          notification.classList.add("show");
+          backdrop.classList.add("show");
+        }, 10);
+        
+        // Start New button
+        notification.querySelector(".draft-recover-btn").onclick = () => {
+          notification.classList.remove("show");
+          backdrop.classList.remove("show");
+          setTimeout(() => {
+            notification.remove();
+            backdrop.remove();
+          }, 300);
+          resetForm();
+        };
+        
+        // Cancel button
+        notification.querySelector(".draft-discard-btn").onclick = () => {
+          notification.classList.remove("show");
+          backdrop.classList.remove("show");
+          setTimeout(() => {
+            notification.remove();
+            backdrop.remove();
+          }, 300);
+        };
+        
+        // Click backdrop to cancel
+        backdrop.onclick = () => {
+          notification.classList.remove("show");
+          backdrop.classList.remove("show");
+          setTimeout(() => {
+            notification.remove();
+            backdrop.remove();
+          }, 300);
+        };
+      } else {
+        resetForm();
+      }
+
     } else if (e.altKey && e.key === "a") {
       e.preventDefault();
       document.getElementById("addItem").click();
@@ -2622,38 +2943,113 @@ function setupAriaLiveRegions() {
 function initializeFooterHandlers() {
   document.getElementById("aboutApp")?.addEventListener("click", (e) => {
     e.preventDefault();
-    alert(`📄 Invoice Maker v1.0
-
-🚀 Professional invoicing made simple!
-
-✨ Features:
-• Create unlimited invoices
-• Share via WhatsApp & email
-• Works completely offline
-• Multi-currency support
-• Auto-save functionality
-
-🛡️ Privacy-First: All data stored locally on your device
-
-💻 Progressive Web App (PWA)
-
-🇿🇲 Built by Evans Munsha for African entrepreneurs
-
-Contact: evansmunsha@gmail.com | +260963266937`);
+    
+    // Create custom about modal
+    const notification = document.createElement("div");
+    notification.className = "draft-recovery-notification";
+    notification.style.maxWidth = "500px";
+    notification.innerHTML = `
+      <div class="draft-recovery-content">
+        <h4>📄 Invoice Maker v1.0</h4>
+        <p style="line-height: 1.8; margin: 12px 0; text-align: left;">
+          <strong>🚀 Professional invoicing made simple!</strong><br><br>
+          <strong>✨ Features:</strong><br>
+          • Create unlimited invoices<br>
+          • Share via WhatsApp & email<br>
+          • Works completely offline<br>
+          • Multi-currency support<br>
+          • Auto-save functionality<br><br>
+          <strong>🛡️ Privacy-First:</strong> All data stored locally on your device<br><br>
+          <strong>💻 Progressive Web App (PWA)</strong><br><br>
+          <strong>🇿🇲 Built by Evans Munsha for African entrepreneurs</strong><br><br>
+          Contact: evansmunsha@gmail.com | +260963266937
+        </p>
+        <div class="draft-recovery-actions">
+          <button class="primary draft-recover-btn">Close</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    const backdrop = document.createElement("div");
+    backdrop.className = "draft-recovery-backdrop";
+    document.body.appendChild(backdrop);
+    
+    setTimeout(() => {
+      notification.classList.add("show");
+      backdrop.classList.add("show");
+    }, 10);
+    
+    // Close button
+    const closeModal = () => {
+      notification.classList.remove("show");
+      backdrop.classList.remove("show");
+      setTimeout(() => {
+        notification.remove();
+        backdrop.remove();
+      }, 300);
+    };
+    
+    notification.querySelector(".draft-recover-btn").onclick = closeModal;
+    backdrop.onclick = closeModal;
   });
 
   document.getElementById("supportLink")?.addEventListener("click", (e) => {
     e.preventDefault();
-    if (
-      confirm(`🛠️ Need Help?
-
-📧 Email: evansmunsha@gmail.com
-📱 Phone: +260963266937
-
-Contact support via email?`)
-    ) {
+    
+    // Create custom support modal
+    const notification = document.createElement("div");
+    notification.className = "draft-recovery-notification";
+    notification.innerHTML = `
+      <div class="draft-recovery-content">
+        <h4>🛠️ Need Help?</h4>
+        <p style="line-height: 1.8; margin: 12px 0;">
+          <strong>📧 Email:</strong> evansmunsha@gmail.com<br>
+          <strong>📱 Phone:</strong> +260963266937
+        </p>
+        <p style="margin-top: 12px;">Contact support via email?</p>
+        <div class="draft-recovery-actions">
+          <button class="primary draft-recover-btn">Send Email</button>
+          <button class="secondary draft-discard-btn">Cancel</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    const backdrop = document.createElement("div");
+    backdrop.className = "draft-recovery-backdrop";
+    document.body.appendChild(backdrop);
+    
+    setTimeout(() => {
+      notification.classList.add("show");
+      backdrop.classList.add("show");
+    }, 10);
+    
+    // Send Email button
+    notification.querySelector(".draft-recover-btn").onclick = () => {
+      notification.classList.remove("show");
+      backdrop.classList.remove("show");
+      setTimeout(() => {
+        notification.remove();
+        backdrop.remove();
+      }, 300);
       window.open("mailto:evansmunsha@gmail.com?subject=Invoice Maker Support");
-    }
+    };
+    
+    // Cancel button
+    const closeModal = () => {
+      notification.classList.remove("show");
+      backdrop.classList.remove("show");
+      setTimeout(() => {
+        notification.remove();
+        backdrop.remove();
+      }, 300);
+    };
+    
+    notification.querySelector(".draft-discard-btn").onclick = closeModal;
+    backdrop.onclick = closeModal;
   });
 }
 
