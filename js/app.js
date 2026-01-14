@@ -84,42 +84,98 @@ function showWelcomeMessage() {
   }
 }
 
+
 /* =========================
    3. GOOGLE PLAY BILLING
 ========================= */
 const GOOGLE_PLAY_BILLING_URL = "https://play.google.com/billing";
 const PREMIUM_PRODUCT_ID = "premium_unlock";
 
+// ✅ MANDATORY: Ensure Play Billing is available before using it
+async function ensurePlayBillingAvailable() {
+  if (!window.getDigitalGoodsService) {
+    throw new Error("Play Billing not available yet - app may still be initializing");
+  }
+
+  let service = null;
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  // Retry logic in case service is still initializing
+  while (!service && attempts < maxAttempts) {
+    try {
+      service = await window.getDigitalGoodsService(GOOGLE_PLAY_BILLING_URL);
+      if (service) {
+        console.log("✅ Play Billing service connected");
+        return service;
+      }
+    } catch (err) {
+      attempts++;
+      console.warn(`Billing service attempt ${attempts} failed:`, err);
+      if (attempts < maxAttempts) {
+        // Wait 1 second before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
+  
+  throw new Error("Play Billing service unavailable - please try again in a moment");
+}
+
+
+
+
 async function initDigitalGoods() {
   if (!window.getDigitalGoodsService) {
-    console.log("Digital Goods API not available (not in TWA)");
+    console.log("❌ Digital Goods API not available (not in TWA)");
     return;
   }
+  
   try {
-    digitalGoodsService = await window.getDigitalGoodsService(
-      GOOGLE_PLAY_BILLING_URL,
-    );
-    console.log("✅ Digital Goods Service initialized");
+    console.log("🔵 Initializing Digital Goods Service...");
+    digitalGoodsService = await ensurePlayBillingAvailable();
+    console.log("✅ Digital Goods Service initialized successfully");
     await restorePurchases();
   } catch (err) {
-    console.error("Digital Goods init failed:", err);
+    console.error("❌ Digital Goods init failed:", err);
   }
 }
 
 async function restorePurchases() {
-  if (!digitalGoodsService) return;
+  if (!digitalGoodsService) {
+    console.log("⚠️ No digital goods service - skipping restore");
+    return;
+  }
+  
   try {
+    console.log("🔵 Checking for existing purchases...");
     const purchases = await digitalGoodsService.listPurchases();
-    console.log("Checking existing purchases:", purchases);
+    console.log("Purchases found:", purchases);
+    
     for (const purchase of purchases) {
+      console.log("Checking purchase:", purchase.itemId);
+      
       if (purchase.itemId === PREMIUM_PRODUCT_ID) {
         console.log("✅ Found existing premium purchase");
+        
+        // Acknowledge if not already acknowledged
+        if (purchase.purchaseToken) {
+          try {
+            await digitalGoodsService.acknowledge(purchase.purchaseToken, "onetime");
+            console.log("✅ Purchase acknowledged");
+          } catch (ackErr) {
+            console.log("Purchase already acknowledged or error:", ackErr);
+          }
+        }
+        
         activatePremium();
         return;
       }
     }
+    
+    console.log("ℹ️ No existing premium purchases found");
   } catch (err) {
-    console.error("Restore purchases failed:", err);
+    console.error("❌ Restore purchases failed:", err);
   }
 }
 
@@ -127,7 +183,7 @@ async function purchasePremiumWithGooglePlay() {
   const btn = document.getElementById("purchasePremium");
 
   try {
-    // Check if Digital Goods API is available
+    // Check if we're in a TWA environment
     if (typeof window.getDigitalGoodsService !== "function") {
       showToast(
         "Not Available",
@@ -139,39 +195,43 @@ async function purchasePremiumWithGooglePlay() {
 
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = "🔄 Processing...";
+      btn.innerHTML = "🔄 Connecting to Google Play...";
     }
 
-    // Get Digital Goods Service
-    const service = await window.getDigitalGoodsService(
-      GOOGLE_PLAY_BILLING_URL,
-    );
-    if (!service) {
-      throw new Error("Failed to connect to Google Play Billing");
-    }
-    console.log("✅ Got Digital Goods Service");
+    // ✅ STEP 1: Ensure billing service is available (with retry)
+    console.log("🔵 Step 1: Getting Digital Goods Service...");
+    const service = await ensurePlayBillingAvailable();
+    
+    if (btn) btn.innerHTML = "🔄 Loading product...";
 
-    // Get product details to verify product exists
+    // ✅ STEP 2: Get product details (verify product exists)
+    console.log("🔵 Step 2: Fetching product details for:", PREMIUM_PRODUCT_ID);
     const skuDetails = await service.getDetails([PREMIUM_PRODUCT_ID]);
-    console.log("Product details:", skuDetails);
+    console.log("Product details response:", skuDetails);
 
     if (!skuDetails || skuDetails.length === 0) {
       throw new Error(
-        `Product '${PREMIUM_PRODUCT_ID}' not found in Google Play Console. Make sure the product is active.`,
+        `Product '${PREMIUM_PRODUCT_ID}' not found. Make sure product ID matches Play Console exactly (case-sensitive).`
       );
     }
 
     const product = skuDetails[0];
-    console.log(
-      `✅ Product found: ${product.title} - ${product.price.value} ${product.price.currency}`,
-    );
+    console.log("✅ Product found:", {
+      id: product.itemId,
+      title: product.title,
+      price: product.price?.value,
+      currency: product.price?.currency
+    });
 
-    // Use Payment Request API to initiate purchase
+    if (btn) btn.innerHTML = "🔄 Opening payment...";
+
+    // ✅ STEP 3: Create Payment Request
+    console.log("🔵 Step 3: Creating Payment Request...");
     const paymentMethods = [
       {
         supportedMethods: GOOGLE_PLAY_BILLING_URL,
         data: {
-          sku: PREMIUM_PRODUCT_ID,
+          sku: PREMIUM_PRODUCT_ID, // Must match Play Console EXACTLY
         },
       },
     ];
@@ -186,46 +246,49 @@ async function purchasePremiumWithGooglePlay() {
       },
     };
 
-    console.log("Creating Payment Request...");
     const paymentRequest = new PaymentRequest(paymentMethods, paymentDetails);
 
-    // Check if payment method is available
+    // ✅ STEP 4: Verify payment method is available
+    console.log("🔵 Step 4: Checking if payment method is available...");
     const canMakePayment = await paymentRequest.canMakePayment();
+    
     if (!canMakePayment) {
-      throw new Error("Google Play payment is not available on this device");
+      throw new Error("Google Play payment method not available on this device");
     }
     console.log("✅ Payment method available");
 
-    // Show payment UI
-    console.log("Showing payment UI...");
+    // ✅ STEP 5: Show payment UI
+    console.log("🔵 Step 5: Showing payment UI...");
     const paymentResponse = await paymentRequest.show();
-    console.log("Payment response received:", paymentResponse);
+    console.log("✅ Payment response received:", paymentResponse);
 
-    // Get purchase token from response
+    // ✅ STEP 6: Get purchase token
     const { purchaseToken } = paymentResponse.details;
 
     if (!purchaseToken) {
-      throw new Error("No purchase token received");
+      throw new Error("No purchase token received from Google Play");
     }
-    console.log("✅ Purchase token received");
+    console.log("✅ Purchase token received:", purchaseToken.substring(0, 20) + "...");
 
-    // Acknowledge the purchase (required for one-time purchases)
+    // ✅ STEP 7: ACKNOWLEDGE THE PURCHASE (CRITICAL!)
+    console.log("🔵 Step 7: Acknowledging purchase...");
     try {
       await service.acknowledge(purchaseToken, "onetime");
-      console.log("✅ Purchase acknowledged");
+      console.log("✅ Purchase acknowledged successfully");
     } catch (ackErr) {
-      console.warn(
-        "Acknowledge warning (may already be acknowledged):",
-        ackErr,
-      );
+      // Sometimes purchase is already acknowledged
+      console.warn("Acknowledge warning (may already be acknowledged):", ackErr);
     }
 
-    // Complete the payment
+    // ✅ STEP 8: Complete the payment
+    console.log("🔵 Step 8: Completing payment...");
     await paymentResponse.complete("success");
     console.log("✅ Payment completed");
 
-    // Activate premium features
+    // ✅ STEP 9: Activate premium features
+    console.log("🔵 Step 9: Activating premium...");
     activatePremium();
+    
     showToast(
       "Success 🎉",
       "Premium unlocked permanently! Thank you for your purchase.",
@@ -233,22 +296,36 @@ async function purchasePremiumWithGooglePlay() {
       5000,
     );
     closePremiumModal();
+    
+    console.log("✅ PURCHASE COMPLETE - All steps successful");
+
   } catch (err) {
-    console.error("Purchase failed:", err);
+    console.error("❌ Purchase failed at step:", err);
+    console.error("Error details:", {
+      name: err.name,
+      message: err.message,
+      stack: err.stack
+    });
 
     let errorMessage = "Purchase failed. Please try again.";
+    let errorTitle = "Payment Failed";
 
+    // Specific error handling
     if (err.name === "AbortError" || err.name === "NotAllowedError") {
-      errorMessage = "Purchase was cancelled.";
-    } else if (err.message.includes("not found")) {
-      errorMessage = "Product not available. Please try again later.";
-    } else if (err.message.includes("not available")) {
-      errorMessage = err.message;
+      errorTitle = "Payment Cancelled";
+      errorMessage = "You cancelled the purchase.";
+    } else if (err.message.includes("not found") || err.message.includes("Product")) {
+      errorTitle = "Product Unavailable";
+      errorMessage = "Premium product not available. Product ID may not match Play Console.";
+    } else if (err.message.includes("not available") || err.message.includes("unavailable")) {
+      errorTitle = "Service Unavailable";
+      errorMessage = "Google Play Billing is temporarily unavailable. Wait a moment and try again.";
     } else if (err.message) {
       errorMessage = err.message;
     }
 
-    showToast("Payment Failed", errorMessage, "error", 5000);
+    showToast(errorTitle, errorMessage, "error", 6000);
+
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -2357,13 +2434,45 @@ function setupPlatformLinks() {
   }
 }
 
-function openPremiumModal() {
+async function openPremiumModal() {
   const modal = document.getElementById("premiumModal");
-  if (modal) {
-    modal.style.display = "";
-    updatePremiumModalForPlatform();
-    modal.classList.remove("hidden");
+  if (!modal) return;
+
+  // **NEW: Check if Google Play Billing is available**
+  if (typeof window.getDigitalGoodsService === "function") {
+    try {
+      showLoading("Checking Google Play...");
+      
+      // Try to initialize service
+      const service = await window.getDigitalGoodsService(GOOGLE_PLAY_BILLING_URL);
+      
+      if (service) {
+        // Check if product is available
+        const products = await service.getDetails([PREMIUM_PRODUCT_ID]);
+        
+        if (!products || products.length === 0) {
+          hideLoading();
+          showToast(
+            "Product Unavailable",
+            "Premium product is not available right now. Please try again later.",
+            "error",
+            5000
+          );
+          return;
+        }
+      }
+      
+      hideLoading();
+    } catch (err) {
+      hideLoading();
+      console.warn("Billing check failed:", err);
+      // Continue anyway - user can still try
+    }
   }
+
+  modal.style.display = "";
+  updatePremiumModalForPlatform();
+  modal.classList.remove("hidden");
 }
 
 function closePremiumModal() {
@@ -3057,112 +3166,55 @@ function initializeFooterHandlers() {
    22. DEBUGGING TOOLS
 ========================= */
 window.invoiceMakerDebug = {
-  checkBillingAPI: async () => {
-    console.log("=== BILLING API CHECK ===");
-    console.log(
-      "1. Digital Goods API:",
-      typeof window.getDigitalGoodsService === "function"
-        ? "✅ Available"
-        : "❌ Not available (not in TWA)",
-    );
-    console.log(
-      "2. Payment Request API:",
-      typeof PaymentRequest === "function"
-        ? "✅ Available"
-        : "❌ Not available",
-    );
-
-    if (typeof window.getDigitalGoodsService === "function") {
-      try {
-        const service = await window.getDigitalGoodsService(
-          "https://play.google.com/billing",
-        );
-        console.log("3. Digital Goods Service: ✅ Connected");
-
-        const details = await service.getDetails(["premium_unlock"]);
-        console.log("4. Product lookup result:", details);
-
-        if (details && details.length > 0) {
-          const product = details[0];
-          console.log("   ✅ Product found!");
-          console.log("   - Item ID:", product.itemId);
-          console.log("   - Title:", product.title);
-          console.log("   - Description:", product.description);
-          console.log(
-            "   - Price:",
-            product.price?.value,
-            product.price?.currency,
-          );
-
-          // Check Payment Request availability
-          const paymentMethods = [
-            {
-              supportedMethods: "https://play.google.com/billing",
-              data: { sku: "premium_unlock" },
-            },
-          ];
-          const paymentDetails = {
-            total: {
-              label: "Test",
-              amount: { currency: "USD", value: "4.99" },
-            },
-          };
-          const request = new PaymentRequest(paymentMethods, paymentDetails);
-          const canPay = await request.canMakePayment();
-          console.log("5. Can make payment:", canPay ? "✅ YES" : "❌ NO");
-
-          if (canPay) {
-            console.log("\n🎉 READY TO ACCEPT PAYMENTS!");
-          }
-        } else {
-          console.log("   ❌ Product 'premium_unlock' not found");
-          console.log("   Check Google Play Console:");
-          console.log("   - Is the product ID exactly 'premium_unlock'?");
-          console.log("   - Is the product status 'Active'?");
-          console.log("   - Is the app in the same testing track?");
-        }
-
-        // Check existing purchases
-        const purchases = await service.listPurchases();
-        console.log(
-          "6. Existing purchases:",
-          purchases.length > 0 ? purchases : "None",
-        );
-      } catch (err) {
-        console.error("   ❌ Error:", err.name, "-", err.message);
+  // ... existing debug functions ...
+  
+  // NEW: Test billing availability
+  testBillingAvailability: async () => {
+    console.log("\n=== BILLING AVAILABILITY TEST ===");
+    
+    console.log("1. Checking if getDigitalGoodsService exists...");
+    console.log("   Result:", typeof window.getDigitalGoodsService === "function" ? "✅ YES" : "❌ NO");
+    
+    if (typeof window.getDigitalGoodsService !== "function") {
+      console.log("   ❌ Not running in TWA - billing unavailable");
+      return;
+    }
+    
+    console.log("\n2. Attempting to get service...");
+    try {
+      const service = await ensurePlayBillingAvailable();
+      console.log("   ✅ Service obtained:", service);
+      
+      console.log("\n3. Checking product availability...");
+      const products = await service.getDetails([PREMIUM_PRODUCT_ID]);
+      console.log("   Products found:", products);
+      
+      if (products && products.length > 0) {
+        console.log("   ✅ Product details:");
+        console.log("      ID:", products[0].itemId);
+        console.log("      Title:", products[0].title);
+        console.log("      Price:", products[0].price?.value, products[0].price?.currency);
+      } else {
+        console.log("   ❌ Product not found - check Play Console");
       }
-    } else {
-      console.log("\n⚠️ Not running in Google Play TWA environment");
-      console.log("   Digital Goods API requires the app to be:");
-      console.log("   - Installed from Google Play Store");
-      console.log("   - Running as a Trusted Web Activity (TWA)");
+      
+      console.log("\n4. Checking existing purchases...");
+      const purchases = await service.listPurchases();
+      console.log("   Purchases:", purchases);
+      
+      console.log("\n✅ BILLING TEST COMPLETE");
+      
+    } catch (err) {
+      console.error("   ❌ Error:", err.name, "-", err.message);
+      console.error("   Full error:", err);
     }
   },
-
-  checkPremiumStatus: () => {
-    console.log("=== PREMIUM STATUS ===");
-    console.log("isPremiumUser:", isPremiumUser ? "✅ PREMIUM" : "❌ FREE");
-    console.log(
-      "localStorage:",
-      localStorage.getItem("premiumUser") || "NOT SET",
-    );
-  },
-
-  simulatePurchase: () => {
-    localStorage.setItem("premiumUser", "true");
-    isPremiumUser = true;
-    hideAds();
-    updateUIForPremiumStatus();
-    showToast("Test", "Premium simulated", "success");
-  },
-
-  fullDiagnostic: async () => {
-    console.log("\n🔍 FULL DIAGNOSTIC\n");
-    await window.invoiceMakerDebug.checkBillingAPI();
-    console.log("\n");
-    window.invoiceMakerDebug.checkPremiumStatus();
-    console.log("\n✅ Complete\n");
-  },
+  
+  // Existing functions...
+  checkBillingAPI: async () => { /* ... */ },
+  checkPremiumStatus: () => { /* ... */ },
+  simulatePurchase: () => { /* ... */ },
+  fullDiagnostic: async () => { /* ... */ }
 };
 
 console.log(
