@@ -62,8 +62,24 @@ function exportInvoicePDF(invoice) {
     doc.setFont(undefined, "normal");
     y += 8;
     doc.text(invoice.businessName || "Business Name", 20, y);
+    y += 6;
 
-    y += 15;
+    // ✅ Business Address (NEW)
+    if (invoice.businessAddress && invoice.businessAddress.trim()) {
+      const addressLines = doc.splitTextToSize(invoice.businessAddress, 170);
+      addressLines.forEach(line => {
+        doc.text(line, 20, y);
+        y += 6;
+      });
+    }
+
+    // ✅ Business Phone (NEW)
+    if (invoice.businessPhone && invoice.businessPhone.trim()) {
+      doc.text(invoice.businessPhone, 20, y);
+      y += 6;
+    }
+
+    y += 9; // Extra spacing after business info
 
     // Client Information
     doc.setFont(undefined, "bold");

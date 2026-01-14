@@ -49,6 +49,26 @@
                     ></span>
                 </label>
 
+                <label for="businessAddress">
+                    Business Address/Location (optional)
+                    <input
+                        id="businessAddress"
+                        type="address"
+                        placeholder="e.g. Plot 123, Main Street, Lusaka"
+                        class="form-field"
+                    />
+                </label>
+
+                <label for="businessPhone">
+                    Business Phone (optional)
+                    <input
+                        id="businessPhone"
+                        type="tel"
+                        placeholder="e.g. +260 123 456 789"
+                        class="form-field"
+                    />
+                </label>
+
                 <label for="clientName">
                     Client Name (optional)
                     <input
@@ -56,6 +76,10 @@
                         placeholder="e.g. John Banda"
                         class="form-field"
                     />
+                    <div id="recentClients" class="recent-clients hidden" aria-label="Recent clients">
+                        <span class="recent-clients-label">Recent clients:</span>
+                        <div id="recentClientsList" class="recent-clients-list"></div>
+                    </div>
                 </label>
 
                 <div class="date-time-group">
@@ -232,7 +256,7 @@
                         <div class="usage-bar">
                             <div class="usage-label">
                                 <span>Invoices this month</span>
-                                <span id="invoiceUsage">0/10</span>
+                                <span id="invoiceUsage">0/20</span>
                             </div>
                             <div class="progress-bar">
                                 <div
@@ -244,7 +268,7 @@
                         <div class="usage-bar">
                             <div class="usage-label">
                                 <span>PDFs today</span>
-                                <span id="pdfUsage">0/5</span>
+                                <span id="pdfUsage">0/10</span>
                             </div>
                             <div class="progress-bar">
                                 <div
@@ -285,6 +309,61 @@
                 </div>
             </section>
 
+            <!-- Backup & Restore Section -->
+            <section
+                class="card"
+                role="region"
+                aria-labelledby="backup-heading"
+            >
+                <h2 id="backup-heading">Backup &amp; Restore</h2>
+                <p class="hint">
+                    All invoices are stored on this device. Export a backup file so
+                    you can restore your data if you change or reset your phone.
+                </p>
+                <div class="backup-actions">
+                    <button
+                        id="exportBackup"
+                        class="secondary"
+                        aria-label="Download a backup of all invoices"
+                    >
+                        ⬇ Export backup
+                    </button>
+                    <button
+                        id="importBackup"
+                        class="secondary"
+                        aria-label="Import invoices from a backup file"
+                    >
+                        ⬆ Import backup
+                    </button>
+                    <input
+                        type="file"
+                        id="importBackupFile"
+                        accept="application/json"
+                        aria-label="Choose backup file to import"
+                        hidden
+                    />
+                </div>
+            </section>
+
+            <!-- Recent Invoices Section -->
+            <section
+                id="recentInvoicesCard"
+                class="card hidden"
+                role="region"
+                aria-labelledby="recent-invoices-heading"
+            >
+                <h2 id="recent-invoices-heading">Recent Invoices</h2>
+                <p class="hint">
+                    Quick access to your last few invoices. Tap "Invoice again" to
+                    create a new invoice for the same client.
+                </p>
+                <ul
+                    id="recentInvoicesList"
+                    class="recent-invoices-list"
+                    aria-label="Recent invoices"
+                ></ul>
+            </section>
+
             <!-- Invoice History Section -->
             <section
                 id="history"
@@ -292,6 +371,18 @@
                 aria-labelledby="history-heading"
             >
                 <h2 id="history-heading">Invoice History</h2>
+
+                <div id="clientStats" class="client-stats hidden">
+                    <h3>Client summary</h3>
+                    <p class="hint">
+                        Top clients based on total invoice amounts.
+                    </p>
+                    <ul
+                        id="clientStatsList"
+                        class="client-stats-list"
+                        aria-label="Top clients by invoice total"
+                    ></ul>
+                </div>
 
                 <!-- Search & Filter Controls -->
                 <div class="history-controls" role="search">
@@ -328,10 +419,33 @@
                             <option value="client-asc">Client A-Z</option>
                             <option value="total-desc">Highest Amount</option>
                         </select>
+                        <label for="statusFilter" class="sr-only"
+                            >Filter invoices by payment status</label
+                        >
+                        <select
+                            id="statusFilter"
+                            class="filter-select"
+                            aria-label="Filter invoices by payment status"
+                        >
+                            <option value="all">All statuses</option>
+                            <option value="unpaid">Unpaid</option>
+                            <option value="overdue">Overdue</option>
+                            <option value="paid">Paid</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Bulk Actions -->
+                <div id="invoiceSummary" class="invoice-summary hidden">
+                    <div class="invoice-summary-row">
+                        <span>Unpaid invoices</span>
+                        <strong id="unpaidCount">0</strong>
+                    </div>
+                    <div class="invoice-summary-row">
+                        <span>Unpaid total</span>
+                        <strong id="unpaidTotal">0</strong>
+                    </div>
+                </div>
                 <div class="bulk-actions hidden" id="bulkActions">
                     <div class="bulk-info">
                         <span id="selectedCount">0</span> invoices selected
@@ -439,13 +553,33 @@
                             />
                         </label>
 
+                    <label for="editBusinessAddress">
+                        Business Address/Location (optional)
+                        <textarea
+                            id="editBusinessAddress"
+                            placeholder="e.g. Plot 123, Main Street, Lusaka"
+                            class="form-field"
+                            rows="2"
+                        ></textarea>
+                    </label>
+
+                        <label for="editBusinessPhone">
+                    Business Phone (optional)
+                    <input
+                        id="editBusinessPhone"
+                        type="tel"
+                        placeholder="e.g. +260 123 456 789"
+                        class="form-field"
+                    />
+                    </label>
+
                         <label for="editClientName">
-                            Client Name
-                            <input
-                                id="editClientName"
-                                placeholder="Client Name"
-                            />
-                        </label>
+                    Client Name
+                    <input
+                        id="editClientName"
+                        placeholder="Client Name"
+                    />
+                </label>
 
                         <div class="date-time-group">
                             <label for="editDate">
@@ -500,7 +634,7 @@
                         💾 Save Changes
                     </button>
                     <button id="duplicateInvoice" class="secondary">
-                        📋 Duplicate
+                        🔁 Invoice again
                     </button>
                     <button id="cancelEdit" class="secondary">Cancel</button>
                 </div>

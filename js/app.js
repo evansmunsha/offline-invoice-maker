@@ -18,7 +18,7 @@ let currentEditingInvoice = null,
 let digitalGoodsService = null;
 let itemsDiv, totalSpan, invoiceList;
 
-const FREE_LIMITS = { invoices_per_month: 10, pdfs_per_day: 5 };
+const FREE_LIMITS = { invoices_per_month: 20, pdfs_per_day: 10 };
 
 /* =========================
    2. INITIALIZATION
@@ -41,6 +41,7 @@ window.addEventListener("load", async () => {
   initializeKeyboardShortcuts();
   initializeAccessibility();
   initializeMonetization();
+  initializeBackupRestore();
 
   setupFormValidation();
   setupSearchAndFilter();
@@ -50,6 +51,7 @@ window.addEventListener("load", async () => {
   setupModalHandlers();
   setupUsageStatsHandlers();
   initializeFooterHandlers();
+  setupClientNameSuggestions();
 
   checkForSavedDraft();
   handleSharedInvoiceFromURL();
@@ -370,15 +372,34 @@ function setupFormValidation() {
     invoiceDate: { required: true },
   };
 
-  Object.entries(fields).forEach(([id, rules]) => {
-    const field = document.getElementById(id);
-    field.addEventListener("blur", () => {
-      validateField(id, field.value, rules);
-      if (id === "businessName" && field.value.trim()) {
-        localStorage.setItem("businessName", field.value);
+        Object.entries(fields).forEach(([id, rules]) => {
+        const field = document.getElementById(id);
+        field.addEventListener("blur", () => {
+          validateField(id, field.value, rules);
+          if (id === "businessName" && field.value.trim()) {
+            localStorage.setItem("businessName", field.value);
+          }
+        });
+      });
+
+      // Save business address and phone on blur
+      const addressField = document.getElementById("businessAddress");
+      if (addressField) {
+        addressField.addEventListener("blur", () => {
+          if (addressField.value.trim()) {
+            localStorage.setItem("businessAddress", addressField.value);
+          }
+        });
       }
-    });
-  });
+
+      const phoneField = document.getElementById("businessPhone");
+      if (phoneField) {
+        phoneField.addEventListener("blur", () => {
+          if (phoneField.value.trim()) {
+            localStorage.setItem("businessPhone", phoneField.value);
+          }
+        });
+      }
 
   document.getElementById("invoiceTime").addEventListener("change", () => {
     hasUnsavedChanges = true;
@@ -679,12 +700,15 @@ document.getElementById("saveInvoice").onclick = async () => {
       id: Date.now(),
       invoiceNumber: document.getElementById("invoiceNumber").value,
       businessName: document.getElementById("businessName").value,
+      businessAddress: document.getElementById("businessAddress").value,
+      businessPhone: document.getElementById("businessPhone").value,
       clientName: document.getElementById("clientName").value || "Client",
       date: document.getElementById("invoiceDate").value,
       time: document.getElementById("invoiceTime").value,
       currency: getCurrency(),
       items: structuredClone(items),
       total: totalSpan.textContent,
+      status: "unpaid",
     };
 
     await saveInvoice(invoice);
@@ -714,6 +738,70 @@ document.getElementById("saveInvoice").onclick = async () => {
 async function loadHistory() {
   const invoices = await getInvoices();
   renderInvoiceList(invoices);
+  renderRecentInvoices(invoices);
+}
+
+const OVERDUE_DAYS = 14;
+
+function getInvoiceBaseStatus(inv) {
+  return inv.status || "unpaid";
+}
+
+function getInvoiceStatus(inv) {
+  const base = getInvoiceBaseStatus(inv);
+  if (base === "paid") return "paid";
+  if (!inv.date) return base;
+  const invoiceDate = new Date(inv.date);
+  if (Number.isNaN(invoiceDate.getTime())) return base;
+  const now = new Date();
+  const diffDays = (now - invoiceDate) / (1000 * 60 * 60 * 24);
+  return diffDays > OVERDUE_DAYS ? "overdue" : "unpaid";
+}
+
+function getInvoiceStatusLabel(inv) {
+  const status = getInvoiceStatus(inv);
+  if (status === "paid") return "Paid";
+  if (status === "overdue") return "Overdue";
+  return "Unpaid";
+}
+
+function renderRecentInvoices(invoices) {
+  const card = document.getElementById("recentInvoicesCard");
+  const list = document.getElementById("recentInvoicesList");
+  if (!card || !list) return;
+
+  list.innerHTML = "";
+
+  if (!invoices || !invoices.length) {
+    card.classList.add("hidden");
+    return;
+  }
+
+  const recent = invoices.slice(0, 3);
+
+  recent.forEach((inv) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div class="invoice-header">
+        <div class="invoice-info">
+          <h4>${inv.invoiceNumber || "INV-" + inv.id}</h4>
+          <p><strong>Client:</strong> ${inv.clientName || "No client"}</p>
+          <p><strong>Date:</strong> ${new Date(inv.date).toLocaleDateString()}</p>
+        </div>
+        <div class="invoice-amount">${inv.total}</div>
+      </div>
+      <div class="invoice-actions">
+        <button data-view class="secondary">📄 PDF</button>
+        <button data-again class="secondary">🔁 Invoice again</button>
+      </div>`;
+
+    li.querySelector("[data-view]").onclick = () => exportInvoicePDF(inv);
+    li.querySelector("[data-again]").onclick = () => duplicateInvoice(inv);
+
+    list.appendChild(li);
+  });
+
+  card.classList.remove("hidden");
 }
 
 function renderInvoiceList(invoices) {
@@ -731,6 +819,10 @@ function renderInvoiceList(invoices) {
 
   invoices.forEach((inv) => {
     const li = document.createElement("li");
+    const status = getInvoiceStatus(inv);
+    const statusLabel = getInvoiceStatusLabel(inv);
+    const isPaid = getInvoiceBaseStatus(inv) === "paid";
+    const toggleLabel = isPaid ? "Mark as Unpaid" : "Mark as Paid";
     li.innerHTML = `
       <div class="invoice-select">
         <input type="checkbox" class="invoice-checkbox" data-invoice-id="${inv.id}"
@@ -743,14 +835,18 @@ function renderInvoiceList(invoices) {
             <p><strong>Client:</strong> ${inv.clientName || "No client"}</p>
             <p><strong>Date:</strong> ${new Date(inv.date).toLocaleDateString()}</p>
           </div>
-          <div class="invoice-amount">${inv.total}</div>
+          <div class="invoice-amount">
+            ${inv.total}
+            <div class="invoice-status-badge status-${status}">${statusLabel}</div>
+          </div>
         </div>
         <div class="invoice-actions">
           <button data-edit class="secondary">✏️ Edit</button>
           <button data-view class="secondary">📄 PDF</button>
           <button data-share class="secondary">🔗 Share</button>
           <button data-whatsapp class="whatsapp-quick">💬 WhatsApp</button>
-          <button data-duplicate class="secondary">📋 Copy</button>
+          <button data-duplicate class="secondary">🔁 Invoice again</button>
+          <button data-toggle-status class="secondary">${toggleLabel}</button>
           <button data-delete class="danger">🗑️ Delete</button>
         </div>
       </div>`;
@@ -763,6 +859,28 @@ function renderInvoiceList(invoices) {
       shareWhatsApp();
     };
     li.querySelector("[data-duplicate]").onclick = () => duplicateInvoice(inv);
+    const toggleBtn = li.querySelector("[data-toggle-status]");
+    if (toggleBtn) {
+      toggleBtn.onclick = async () => {
+        try {
+          const currentStatus =
+            getInvoiceBaseStatus(inv) === "paid" ? "paid" : "unpaid";
+          const nextStatus = currentStatus === "paid" ? "unpaid" : "paid";
+          const updated = { ...inv, status: nextStatus };
+          await saveInvoice(updated);
+          await loadHistory();
+          showToast(
+            nextStatus === "paid" ? "Marked as Paid" : "Marked as Unpaid",
+            nextStatus === "paid"
+              ? "Invoice marked as paid."
+              : "Invoice marked as unpaid.",
+            "success",
+          );
+        } catch (error) {
+          showToast("Error", "Failed to update invoice status", "error");
+        }
+      };
+    }
     li.querySelector("[data-delete]").onclick = async () => {
       if (confirm(`Delete invoice ${inv.invoiceNumber || inv.id}?`)) {
         try {
@@ -785,6 +903,144 @@ function renderInvoiceList(invoices) {
   });
 
   updateBulkActionsVisibility();
+  updateInvoiceSummary(invoices);
+  updateClientStats(invoices);
+}
+
+function updateInvoiceSummary(invoices) {
+  const summary = document.getElementById("invoiceSummary");
+  const countEl = document.getElementById("unpaidCount");
+  const totalEl = document.getElementById("unpaidTotal");
+
+  if (!summary || !countEl || !totalEl) return;
+
+  if (!invoices || !invoices.length) {
+    summary.classList.add("hidden");
+    countEl.textContent = "0";
+    totalEl.textContent = "0";
+    return;
+  }
+
+  const unpaidInvoices = invoices.filter((inv) => {
+    const status = getInvoiceStatus(inv);
+    return status === "unpaid" || status === "overdue";
+  });
+
+  if (!unpaidInvoices.length) {
+    summary.classList.add("hidden");
+    countEl.textContent = "0";
+    totalEl.textContent = "0";
+    return;
+  }
+
+  const totalsByCurrency = {};
+  unpaidInvoices.forEach((inv) => {
+    const currency = inv.currency || getCurrency();
+    const amount = parseFloat((inv.total || "0").replace(/[^\d.-]/g, ""));
+    if (!Number.isFinite(amount)) return;
+    totalsByCurrency[currency] = (totalsByCurrency[currency] || 0) + amount;
+  });
+
+  countEl.textContent = String(unpaidInvoices.length);
+  totalEl.textContent = Object.entries(totalsByCurrency)
+    .map(([currency, amount]) => `${currency} ${amount.toFixed(2)}`)
+    .join(" + ");
+
+  summary.classList.remove("hidden");
+}
+
+function updateClientStats(invoices) {
+  const container = document.getElementById("clientStats");
+  const list = document.getElementById("clientStatsList");
+  if (!container || !list) return;
+
+  list.innerHTML = "";
+
+  if (!invoices || !invoices.length) {
+    container.classList.add("hidden");
+    return;
+  }
+
+  const totals = {};
+
+  invoices.forEach((inv) => {
+    const clientName = inv.clientName?.trim() || "No client";
+    const currency = inv.currency || getCurrency();
+    const amount = parseFloat((inv.total || "0").replace(/[^\d.-]/g, ""));
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    const key = `${clientName}||${currency}`;
+    totals[key] = (totals[key] || 0) + amount;
+  });
+
+  const entries = Object.entries(totals)
+    .map(([key, total]) => {
+      const [name, currency] = key.split("||");
+      return { name, currency, total };
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+
+  if (!entries.length) {
+    container.classList.add("hidden");
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>${entry.name}</span>
+      <strong>${entry.currency} ${entry.total.toFixed(2)}</strong>
+    `;
+    list.appendChild(li);
+  });
+
+  container.classList.remove("hidden");
+}
+
+function setupClientNameSuggestions() {
+  const clientInput = document.getElementById("clientName");
+  const container = document.getElementById("recentClients");
+  const list = document.getElementById("recentClientsList");
+  if (!clientInput || !container || !list) return;
+
+  clientInput.addEventListener("focus", async () => {
+    const invoices = await getInvoices();
+    const clients = {};
+    invoices.forEach((inv) => {
+      const name = inv.clientName?.trim();
+      if (name && name !== "No client") {
+        clients[name] = (clients[name] || 0) + 1;
+      }
+    });
+
+    const recent = Object.entries(clients)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name]) => name);
+
+    list.innerHTML = "";
+    if (!recent.length) {
+      container.classList.add("hidden");
+      return;
+    }
+
+    recent.forEach((name) => {
+      const pill = document.createElement("span");
+      pill.className = "recent-client-pill";
+      pill.textContent = name;
+      pill.onclick = () => {
+        clientInput.value = name;
+        container.classList.add("hidden");
+      };
+      list.appendChild(pill);
+    });
+
+    container.classList.remove("hidden");
+  });
+
+  clientInput.addEventListener("blur", () => {
+    setTimeout(() => container.classList.add("hidden"), 200);
+  });
 }
 
 function resetForm() {
@@ -793,6 +1049,9 @@ function resetForm() {
   addItemRow();
   totalSpan.textContent = "0";
   document.getElementById("clientName").value = "";
+  setSmartDefaults();
+  document.getElementById("businessAddress").value = "";
+  document.getElementById("businessPhone").value = "";
   setSmartDefaults();
   document
     .querySelectorAll(".form-field")
@@ -806,6 +1065,8 @@ function resetForm() {
 
 function duplicateInvoice(invoice) {
   document.getElementById("businessName").value = invoice.businessName || "";
+  document.getElementById("businessAddress").value = invoice.businessAddress || "";
+  document.getElementById("businessPhone").value = invoice.businessPhone || "";
   document.getElementById("clientName").value = invoice.clientName || "";
   items = [];
   itemsDiv.innerHTML = "";
@@ -841,6 +1102,8 @@ document.getElementById("generatePDF").onclick = async () => {
     const invoiceData = {
       invoiceNumber: document.getElementById("invoiceNumber").value,
       businessName: document.getElementById("businessName").value,
+      businessAddress: document.getElementById("businessAddress").value,
+      businessPhone: document.getElementById("businessPhone").value,
       clientName: document.getElementById("clientName").value || "Client",
       date: document.getElementById("invoiceDate").value,
       time: document.getElementById("invoiceTime").value,
@@ -906,7 +1169,19 @@ async function generatePDFBlob(invoice) {
       doc.setFont(undefined, "normal");
       y += 8;
       doc.text(invoice.businessName || "Business Name", 20, y);
-      y += 15;
+      y += 8;
+      
+      if (invoice.businessAddress) {
+        doc.text(invoice.businessAddress, 20, y);
+        y += 8;
+      }
+      
+      if (invoice.businessPhone) {
+        doc.text(invoice.businessPhone, 20, y);
+        y += 15;
+      } else {
+        y += 15;
+      }
 
       doc.setFont(undefined, "bold");
       doc.text("To:", 20, y);
@@ -967,12 +1242,14 @@ function initializeAutoSave() {
   autoSaveInterval = setInterval(saveDraft, 30000);
 
   [
-    "businessName",
-    "clientName",
-    "invoiceDate",
-    "invoiceTime",
-    "currency",
-  ].forEach((id) => {
+  "businessName",
+  "businessAddress",
+  "businessPhone",
+  "clientName",
+  "invoiceDate",
+  "invoiceTime",
+  "currency",
+].forEach((id) => {
     const field = document.getElementById(id);
     if (field) {
       field.addEventListener("input", () => {
@@ -998,6 +1275,8 @@ function saveDraft() {
   const draft = {
     timestamp: Date.now(),
     businessName: document.getElementById("businessName").value,
+    businessAddress: document.getElementById("businessAddress").value,
+    businessPhone: document.getElementById("businessPhone").value,
     clientName: document.getElementById("clientName").value,
     invoiceDate: document.getElementById("invoiceDate").value,
     invoiceTime: document.getElementById("invoiceTime").value,
@@ -1042,6 +1321,8 @@ function checkForSavedDraft() {
 
 function recoverDraft(draft) {
   document.getElementById("businessName").value = draft.businessName || "";
+  document.getElementById("businessAddress").value = draft.businessAddress || "";
+  document.getElementById("businessPhone").value = draft.businessPhone || "";
   document.getElementById("clientName").value = draft.clientName || "";
   document.getElementById("invoiceDate").value = draft.invoiceDate || "";
   document.getElementById("invoiceTime").value = draft.invoiceTime || "";
@@ -1063,19 +1344,79 @@ function clearDraft() {
   hasUnsavedChanges = false;
 }
 
+function initializeBackupRestore() {
+  const exportBtn = document.getElementById("exportBackup");
+  const importBtn = document.getElementById("importBackup");
+  const fileInput = document.getElementById("importBackupFile");
+
+  if (!exportBtn || !importBtn || !fileInput) return;
+
+  exportBtn.addEventListener("click", async () => {
+    try {
+      showLoading("Exporting backup...");
+      await exportAllData();
+      hideLoading();
+      showToast(
+        "Backup created",
+        "Your invoices backup file has been downloaded.",
+        "success",
+      );
+    } catch (error) {
+      hideLoading();
+      showToast("Error", "Failed to export backup.", "error");
+    }
+  });
+
+  importBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      showLoading("Importing backup...");
+      const text = await file.text();
+      const importedCount = await importData(text);
+      await loadHistory();
+      hideLoading();
+      showToast(
+        "Import complete",
+        `Imported ${importedCount} invoices from backup.`,
+        "success",
+      );
+    } catch (error) {
+      hideLoading();
+      showToast(
+        "Error",
+        "Failed to import backup. Make sure you selected a valid backup file.",
+        "error",
+      );
+    } finally {
+      e.target.value = "";
+    }
+  });
+}
+
 /* =========================
    13. SEARCH & FILTER
 ========================= */
 function setupSearchAndFilter() {
   const search = document.getElementById("searchInvoices");
   const sort = document.getElementById("sortBy");
+  const statusFilter = document.getElementById("statusFilter");
   if (search) search.addEventListener("input", filterInvoices);
   if (sort) sort.addEventListener("change", filterInvoices);
+  if (statusFilter)
+    statusFilter.addEventListener("change", filterInvoices);
 }
 
 async function filterInvoices() {
   const term = document.getElementById("searchInvoices").value.toLowerCase();
   const sortBy = document.getElementById("sortBy").value;
+  const statusFilter =
+    document.getElementById("statusFilter")?.value || "all";
   let invoices = await getInvoices();
 
   if (term) {
@@ -1084,6 +1425,12 @@ async function filterInvoices() {
         (inv.clientName || "").toLowerCase().includes(term) ||
         (inv.businessName || "").toLowerCase().includes(term) ||
         (inv.invoiceNumber || "").toLowerCase().includes(term),
+    );
+  }
+
+  if (statusFilter !== "all") {
+    invoices = invoices.filter(
+      (inv) => getInvoiceStatus(inv) === statusFilter,
     );
   }
 
@@ -1131,6 +1478,8 @@ function setupModalHandlers() {
       const updated = {
         ...currentEditingInvoice,
         businessName: document.getElementById("editBusinessName").value,
+        businessAddress: document.getElementById("editBusinessAddress").value,
+        businessPhone: document.getElementById("editBusinessPhone").value,
         clientName: document.getElementById("editClientName").value,
         date: document.getElementById("editDate").value,
         time: document.getElementById("editTime").value,
@@ -1164,6 +1513,8 @@ function openEditModal(invoice) {
   document.getElementById("editClientName").value = invoice.clientName || "";
   document.getElementById("editDate").value = invoice.date || "";
   document.getElementById("editTime").value = invoice.time || "";
+  document.getElementById("editBusinessAddress").value = invoice.businessAddress || "";
+  document.getElementById("editBusinessPhone").value = invoice.businessPhone || "";
 
   renderEditItems();
   calculateEditTotal();
@@ -1219,6 +1570,8 @@ function closeEditModal() {
 function duplicateInvoiceFromModal() {
   duplicateInvoice({
     businessName: document.getElementById("editBusinessName").value,
+    businessAddress: document.getElementById("editBusinessAddress").value,
+    businessPhone: document.getElementById("editBusinessPhone").value,
     clientName: document.getElementById("editClientName").value,
     items: [...editItems],
   });
@@ -1238,6 +1591,8 @@ function setupShareFunctionality() {
     openShareModal({
       invoiceNumber: document.getElementById("invoiceNumber").value,
       businessName: document.getElementById("businessName").value,
+      businessAddress: document.getElementById("businessAddress").value,
+      businessPhone: document.getElementById("businessPhone").value,
       clientName: document.getElementById("clientName").value || "Client",
       date: document.getElementById("invoiceDate").value,
       time: document.getElementById("invoiceTime").value,
@@ -1337,18 +1692,18 @@ function shareEmail() {
   const subject = `Invoice ${currentShareInvoice.invoiceNumber}`;
   const body = `Hi,
 
-Please find the invoice details below:
+  Please find the invoice details below:
 
-Invoice Number: ${currentShareInvoice.invoiceNumber}
-Business: ${currentShareInvoice.businessName}
-Client: ${currentShareInvoice.clientName}
-Date: ${new Date(currentShareInvoice.date).toLocaleDateString()}${currentShareInvoice.time ? " at " + currentShareInvoice.time : ""}
-Total: ${currentShareInvoice.total}
+  Invoice Number: ${currentShareInvoice.invoiceNumber}
+  Business: ${currentShareInvoice.businessName}
+  Client: ${currentShareInvoice.clientName}
+  Date: ${new Date(currentShareInvoice.date).toLocaleDateString()}${currentShareInvoice.time ? " at " + currentShareInvoice.time : ""}
+  Total: ${currentShareInvoice.total}
 
-Items:
-${currentShareInvoice.items.map((i) => `- ${i.name}: ${i.qty} x ${i.price} = ${(i.qty * i.price).toFixed(2)}`).join("\n")}
+  Items:
+  ${currentShareInvoice.items.map((i) => `- ${i.name}: ${i.qty} x ${i.price} = ${(i.qty * i.price).toFixed(2)}`).join("\n")}
 
-Best regards`;
+  Best regards`;
 
   window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   showToast(
@@ -1409,18 +1764,31 @@ function sendWhatsAppDirect() {
 }
 
 function formatWhatsAppMessage(inv) {
-  return `*Invoice ${inv.invoiceNumber}*
+  let message = `*Invoice ${inv.invoiceNumber}*
 
-🏢 *Business:* ${inv.businessName}
-👤 *Client:* ${inv.clientName}
-📅 *Date:* ${new Date(inv.date).toLocaleDateString()}${inv.time ? " ⏰ " + inv.time : ""}
-💰 *Total:* ${inv.total}
+  🏢 *Business:* ${inv.businessName}`;
 
-📋 *Items:*
-${inv.items.map((item, i) => `${i + 1}. ${item.name}: ${item.qty} × ${item.price} = *${(item.qty * item.price).toFixed(2)}*`).join("\n")}
+    if (inv.businessAddress) {
+      message += `\n📍 *Address:* ${inv.businessAddress}`;
+    }
+    
+    if (inv.businessPhone) {
+      message += `\n📞 *Phone:* ${inv.businessPhone}`;
+    }
 
-📱 _Generated with Invoice Maker_`;
+    message += `
+  👤 *Client:* ${inv.clientName}
+  📅 *Date:* ${new Date(inv.date).toLocaleDateString()}${inv.time ? " ⏰ " + inv.time : ""}
+  💰 *Total:* ${inv.total}
+
+  📋 *Items:*
+  ${inv.items.map((item, i) => `${i + 1}. ${item.name}: ${item.qty} × ${item.price} = *${(item.qty * item.price).toFixed(2)}*`).join("\n")}
+
+  📱 _Generated with Invoice Maker_`;
+
+    return message;
 }
+
 
 function setupWhatsAppValidation() {
   const input = document.getElementById("whatsappNumber");
@@ -1452,9 +1820,17 @@ function setupWhatsAppValidation() {
 }
 
 async function shareData() {
-  const text = `Invoice ${currentShareInvoice.invoiceNumber}
-
-Business: ${currentShareInvoice.businessName}
+  let text = `Invoice ${currentShareInvoice.invoiceNumber}\n\nBusiness: ${currentShareInvoice.businessName}`;
+  
+  if (currentShareInvoice.businessAddress) {
+    text += `\nAddress: ${currentShareInvoice.businessAddress}`;
+  }
+  
+  if (currentShareInvoice.businessPhone) {
+    text += `\nPhone: ${currentShareInvoice.businessPhone}`;
+  }
+  
+  text += `
 Client: ${currentShareInvoice.clientName}
 Date: ${new Date(currentShareInvoice.date).toLocaleDateString()}${currentShareInvoice.time ? " at " + currentShareInvoice.time : ""}
 Total: ${currentShareInvoice.total}
@@ -1519,6 +1895,8 @@ function handleSharedInvoiceFromURL() {
 
 function loadSharedInvoice(inv) {
   document.getElementById("businessName").value = inv.businessName || "";
+  document.getElementById("businessAddress").value = inv.businessAddress || "";
+  document.getElementById("businessPhone").value = inv.businessPhone || "";
   document.getElementById("clientName").value = inv.clientName || "";
   document.getElementById("invoiceDate").value = inv.date || "";
   document.getElementById("invoiceTime").value = inv.time || "";
@@ -1731,21 +2109,21 @@ function shareBulkInvoices(invoices) {
   const currency = invoices[0]?.currency || getCurrency();
   const summary = `*Invoice Summary*
 
-📊 *Total Invoices:* ${invoices.length}
-💰 *Grand Total:* ${currency} ${total.toFixed(2)}
+  📊 *Total Invoices:* ${invoices.length}
+  💰 *Grand Total:* ${currency} ${total.toFixed(2)}
 
-📋 *Invoice List:*
-${invoices.map((inv) => `• ${inv.invoiceNumber || "INV-" + inv.id}: ${inv.clientName || "No client"} - ${inv.total}`).join("\n")}
+  📋 *Invoice List:*
+  ${invoices.map((inv) => `• ${inv.invoiceNumber || "INV-" + inv.id}: ${inv.clientName || "No client"} - ${inv.total}`).join("\n")}
 
-📱 _Generated with Invoice Maker_`;
+  📱 _Generated with Invoice Maker_`;
 
-  window.open(
-    `https://wa.me/?text=${encodeURIComponent(summary)}`,
-    "_blank",
-    "noopener,noreferrer",
-  );
-  showToast("WhatsApp Opened", "Bulk invoice summary shared", "success");
-  clearSelection();
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(summary)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    showToast("WhatsApp Opened", "Bulk invoice summary shared", "success");
+    clearSelection();
 }
 
 /* =========================

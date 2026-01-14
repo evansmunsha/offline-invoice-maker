@@ -157,15 +157,28 @@ button {
     margin-top: 1rem;
 }
 
-/* History */
-.history-list {
-    list-style: none;
-    padding: 0;
+.backup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
-.history-list li {
-    padding: 0.5rem;
-    border-bottom: 1px solid #ddd;
+.backup-actions button {
+    width: auto;
+}
+
+.recent-invoices-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.recent-invoices-list li {
+    background: #ffffff;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
 }
 
 .history-list .empty {
@@ -305,6 +318,35 @@ button {
     position: relative;
 }
 
+.recent-clients {
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.recent-clients-label {
+    display: inline-block;
+    margin-right: 0.25rem;
+}
+
+.recent-clients-list {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.recent-client-pill {
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    background: #f8f9fa;
+    cursor: pointer;
+}
+
+.recent-client-pill:hover {
+    background: #e9ecef;
+}
+
 /* Items example section */
 .items-example {
     background: #f8f9fa;
@@ -365,6 +407,60 @@ button {
 #invoiceList {
     list-style: none;
     padding: 0;
+}
+
+.invoice-summary {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.invoice-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.invoice-summary strong {
+    font-weight: 700;
+}
+
+.client-stats {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.client-stats h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.client-stats-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.client-stats-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.client-stats-list li:last-child {
+    border-bottom: none;
 }
 
 #invoiceList li {
@@ -746,6 +842,30 @@ button {
     font-weight: bold;
     font-size: 1.1rem;
     color: #007bff;
+}
+
+.invoice-status-badge {
+    display: inline-block;
+    margin-top: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-unpaid {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-overdue {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-paid {
+    background: #d4edda;
+    color: #155724;
 }
 
 .invoice-actions {
