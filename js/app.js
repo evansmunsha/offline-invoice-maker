@@ -20,6 +20,27 @@ let itemsDiv, totalSpan, invoiceList;
 
 const FREE_LIMITS = { invoices_per_month: 20, pdfs_per_day: 10 };
 
+/* Format total display with commas (handles "ZMW 1000.00" format) */
+function formatInvoiceTotalDisplay(totalStr) {
+  if (!totalStr) return "N/A";
+  const parts = totalStr.split(" ");
+  if (parts.length === 2) {
+    const currency = parts[0];
+    const amount = parseFloat(parts[1]);
+    return `${currency} ${formatNumberWithCommas(amount)}`;
+  }
+  return totalStr;
+}
+
+/* Utility function to format numbers with commas */
+function formatNumberWithCommas(num) {
+  if (!num && num !== 0) return "0.00";
+  const numStr = parseFloat(num).toFixed(2);
+  const parts = numStr.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
+}
+
 /* =========================
    2. INITIALIZATION
 ========================= */
@@ -405,6 +426,12 @@ function setSmartDefaults() {
   document.getElementById("invoiceNumber").value = generateInvoiceNumber();
   const saved = localStorage.getItem("businessName");
   if (saved) document.getElementById("businessName").value = saved;
+  const savedAddress = localStorage.getItem("businessAddress");
+  if (savedAddress) document.getElementById("businessAddress").value = savedAddress;
+  const savedPhone = localStorage.getItem("businessPhone");
+  if (savedPhone) document.getElementById("businessPhone").value = savedPhone;
+  const savedEmail = localStorage.getItem("businessEmail");
+  if (savedEmail) document.getElementById("businessEmail").value = savedEmail;
 }
 
 /* =========================
@@ -474,6 +501,15 @@ function setupFormValidation() {
         phoneField.addEventListener("blur", () => {
           if (phoneField.value.trim()) {
             localStorage.setItem("businessPhone", phoneField.value);
+          }
+        });
+      }
+
+      const emailField = document.getElementById("businessEmail");
+      if (emailField) {
+        emailField.addEventListener("blur", () => {
+          if (emailField.value.trim()) {
+            localStorage.setItem("businessEmail", emailField.value);
           }
         });
       }
@@ -706,7 +742,7 @@ document.getElementById("addItem").onclick = () => addItemRow();
 function calculateTotal() {
   const currency = getCurrency();
   const total = items.reduce((sum, i) => sum + i.qty * i.price, 0);
-  totalSpan.textContent = `${currency} ${total.toFixed(2)}`;
+  totalSpan.textContent = `${currency} ${formatNumberWithCommas(total)}`;
   updateCalculationBreakdown(currency, total, items, "calculation-breakdown");
 }
 
@@ -714,7 +750,7 @@ function calculateEditTotal() {
   const currency = getCurrency();
   const total = editItems.reduce((sum, i) => sum + i.qty * i.price, 0);
   document.getElementById("editTotal").textContent =
-    `${currency} ${total.toFixed(2)}`;
+    `${currency} ${formatNumberWithCommas(total)}`;
   updateCalculationBreakdown(
     currency,
     total,
@@ -779,7 +815,11 @@ document.getElementById("saveInvoice").onclick = async () => {
       businessName: document.getElementById("businessName").value,
       businessAddress: document.getElementById("businessAddress").value,
       businessPhone: document.getElementById("businessPhone").value,
+      businessEmail: document.getElementById("businessEmail").value,
       clientName: document.getElementById("clientName").value || "Client",
+      clientEmail: document.getElementById("clientEmail").value,
+      clientPhone: document.getElementById("clientPhone").value,
+      clientAddress: document.getElementById("clientAddress").value,
       date: document.getElementById("invoiceDate").value,
       time: document.getElementById("invoiceTime").value,
       currency: getCurrency(),
@@ -913,7 +953,7 @@ function renderInvoiceList(invoices) {
             <p><strong>Date:</strong> ${new Date(inv.date).toLocaleDateString()}</p>
           </div>
           <div class="invoice-amount">
-            ${inv.total}
+            ${inv.total ? inv.total.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,').replace(/(\d+)\.\d{2}/, (match) => formatNumberWithCommas(parseFloat(match.split(' ')[match.split(' ').length - 1] || match))) : 'N/A'}
             <div class="invoice-status-badge status-${status}">${statusLabel}</div>
           </div>
         </div>
@@ -1231,17 +1271,35 @@ document.getElementById("generatePDF").onclick = async () => {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // Recalculate total to ensure it's current
+    let calculatedTotal = 0;
+    items.forEach((item) => {
+      calculatedTotal += item.qty * item.price;
+    });
+    const currency = getCurrency();
+    const totalDisplay = `${currency} ${calculatedTotal.toFixed(2)}`;
+
+    // Safely get all form field values
+    const getFieldValue = (id) => {
+      const elem = document.getElementById(id);
+      return elem ? elem.value : "";
+    };
+
     const invoiceData = {
-      invoiceNumber: document.getElementById("invoiceNumber").value,
-      businessName: document.getElementById("businessName").value,
-      businessAddress: document.getElementById("businessAddress").value,
-      businessPhone: document.getElementById("businessPhone").value,
-      clientName: document.getElementById("clientName").value || "Client",
-      date: document.getElementById("invoiceDate").value,
-      time: document.getElementById("invoiceTime").value,
-      currency: getCurrency(),
+      invoiceNumber: getFieldValue("invoiceNumber"),
+      businessName: getFieldValue("businessName"),
+      businessAddress: getFieldValue("businessAddress"),
+      businessPhone: getFieldValue("businessPhone"),
+      businessEmail: getFieldValue("businessEmail"),
+      clientName: getFieldValue("clientName") || "Client",
+      clientEmail: getFieldValue("clientEmail"),
+      clientPhone: getFieldValue("clientPhone"),
+      clientAddress: getFieldValue("clientAddress"),
+      date: getFieldValue("invoiceDate"),
+      time: getFieldValue("invoiceTime"),
+      currency: currency,
       items,
-      total: totalSpan.textContent,
+      total: totalDisplay,
     };
 
     exportInvoicePDF(invoiceData);
@@ -1845,7 +1903,7 @@ async function shareNative() {
 
     await navigator.share({
       title: `Invoice ${currentShareInvoice.invoiceNumber}`,
-      text: `Invoice for ${currentShareInvoice.clientName} - ${currentShareInvoice.total}`,
+      text: `Invoice for ${currentShareInvoice.clientName} - ${formatInvoiceTotalDisplay(currentShareInvoice.total)}`,
       files: [file],
     });
 
@@ -1881,7 +1939,7 @@ function shareEmail() {
   Business: ${currentShareInvoice.businessName}
   Client: ${currentShareInvoice.clientName}
   Date: ${new Date(currentShareInvoice.date).toLocaleDateString()}${currentShareInvoice.time ? " at " + currentShareInvoice.time : ""}
-  Total: ${currentShareInvoice.total}
+  Total: ${formatInvoiceTotalDisplay(currentShareInvoice.total)}
 
   Items:
   ${currentShareInvoice.items.map((i) => `- ${i.name}: ${i.qty} x ${i.price} = ${(i.qty * i.price).toFixed(2)}`).join("\n")}

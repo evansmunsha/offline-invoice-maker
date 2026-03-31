@@ -69,6 +69,16 @@
                     />
                 </label>
 
+                <label for="businessEmail">
+                    Business Email (optional)
+                    <input
+                        id="businessEmail"
+                        type="email"
+                        placeholder="e.g. hello@munsha.com"
+                        class="form-field"
+                    />
+                </label>
+            <div class="total-sections">
                 <label for="clientName">
                     Client Name (optional)
                     <input
@@ -81,6 +91,38 @@
                         <div id="recentClientsList" class="recent-clients-list"></div>
                     </div>
                 </label>
+
+                <label for="clientEmail">
+                    Client Email (optional)
+                    <input
+                        id="clientEmail"
+                        type="email"
+                        placeholder="e.g. john@example.com"
+                        class="form-field"
+                    />
+                </label>
+
+                <label for="clientPhone">
+                    Client Phone (optional)
+                    <input
+                        id="clientPhone"
+                        type="tel"
+                        placeholder="e.g. +260 123 456 789"
+                        class="form-field"
+                    />
+                </label>
+
+                <label for="clientAddress">
+                    Client Address (optional)
+                    <input
+                        id="clientAddress"
+                        type="text"
+                        placeholder="e.g. Plot 456, Side Street, Ndola"
+                        class="form-field"
+                    />
+                </label>
+            </div>
+                
 
                 <div class="date-time-group">
                     <label for="invoiceDate">
@@ -175,14 +217,17 @@
                     </select>
                 </label>
 
-                <p
-                    class="total"
-                    role="status"
-                    aria-live="polite"
-                    aria-label="Invoice total"
-                >
-                    Total: <span id="total">0</span>
-                </p>
+                <div class="total-section">
+                    <p
+                        class="total"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="Invoice total"
+                    >
+                        <span class="total-label">Total:</span>
+                        <span id="total" class="total-amount">0</span>
+                    </p>
+                </div>
             </section>
 
             <!-- PDF Settings Section -->
