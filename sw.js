@@ -3,7 +3,7 @@
    Offline-first PWA (PWABuilder compatible)
 ================================================= */
 
-const CACHE_NAME = "offline-invoice-cache-v2";
+const CACHE_NAME = "offline-invoice-cache-" + Date.now();
 
 /* Files required for offline use - use relative paths */
 const PRECACHE_ASSETS = [
@@ -59,7 +59,7 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
 
-  // Never cache Google Play / billing requests
+  // Skip external requests
   if (
     url.origin.includes("google.com") ||
     url.origin.includes("gstatic.com")
@@ -67,6 +67,26 @@ self.addEventListener("fetch", event => {
     return;
   }
 
+  // For HTML & JS → always try network first
+  if (
+    event.request.destination === "document" ||
+    event.request.destination === "script" ||
+    event.request.destination === "style"
+  ) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          return caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, response.clone());
+            return response;
+          });
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // For images → cache first (faster)
   event.respondWith(
     caches.match(event.request).then(response => {
       return response || fetch(event.request);
